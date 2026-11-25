@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useOrderStore } from "@/stores/orderStore";
@@ -12,18 +12,15 @@ import {
   Box,
   CheckCircle2,
   KeyRound,
-  Store,
-  MapPin,
   Clock,
   Sparkles,
-  RefreshCw,
-  QrCode,
 } from "lucide-react";
 
-export default function OrderDetailPage() {
+// Komponen Konten Utama
+function OrderDetailContent() {
   const params = useParams();
   const router = useRouter();
-  const orderId = params.id as string;
+  const orderId = params?.id as string;
 
   const [isMounted, setIsMounted] = useState(false);
   const { getOrderById, updateOrderStatus } = useOrderStore();
@@ -290,5 +287,21 @@ export default function OrderDetailPage() {
 
       <BottomNav />
     </div>
+  );
+}
+
+// Wrapper Suspense untuk Prerendering Safe di Next.js 15/16
+export default function OrderDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
+          <span className="text-xs text-foreground-secondary">Memuat Pesanan...</span>
+        </div>
+      }
+    >
+      <OrderDetailContent />
+    </Suspense>
   );
 }
