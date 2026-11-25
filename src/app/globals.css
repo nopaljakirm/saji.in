@@ -1,26 +1,61 @@
 @import "tailwindcss";
 
+@theme {
+  /* Brand Primary (Orange Saji.in dari Figma) */
+  --color-primary: #F97316;
+  --color-primary-deep: #EA580C;
+  --color-primary-soft: #FFF1E8;
+  --color-primary-foreground: #FFFFFF;
+
+  /* Background Canvas & Surface Card */
+  --color-background: #F8F7F4;
+  --color-surface: #FFFFFF;
+
+  /* Teks Utama & Sekunder */
+  --color-foreground: #242424;
+  --color-foreground-secondary: #737373;
+
+  /* Border & Garis Pembatas */
+  --color-border: #E8E5E0;
+  --color-border-soft: #F1EFEB;
+
+  /* Status Colors (Sukses, Warning, Danger, Info) */
+  --color-status-success: #2E8B57;
+  --color-status-success-soft: #EAF7EF;
+  --color-status-warning: #D99A00;
+  --color-status-warning-soft: #FFF7DD;
+  --color-status-danger: #D9534F;
+  --color-status-danger-soft: #FDECEC;
+  --color-status-info: #1E5CFA;
+  --color-status-info-soft: #EFF4FE;
+
+  /* Font Plus Jakarta Sans */
+  --font-sans: var(--font-plus-jakarta), sans-serif;
+
+  /* Radius Modular */
+  --radius-card: 12px;
+  --radius-modal: 16px;
+  --radius-section: 20px;
+  --radius-dialog: 24px;
+  --radius-pill: 999px;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-plus-jakarta: 'Plus Jakarta Sans', sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Mematikan scrollbar default untuk tampilan mobile app */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
