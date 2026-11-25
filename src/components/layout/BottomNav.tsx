@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
@@ -20,16 +21,21 @@ import {
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const [isMounted, setIsMounted] = useState(false);
+
   const { currentUser } = useAuthStore();
   const { getActiveOrderForBuyer, orders } = useOrderStore();
   const { getTotalItems } = useCartStore();
 
-  const isBuyer = currentUser?.role === "BUYER";
-  const cartCount = getTotalItems();
-  const activeOrder = currentUser ? getActiveOrderForBuyer(currentUser.id) : null;
+  // Mencegah hydration mismatch antara server dan client localStorage
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
-  // Hitung berapa pesanan yang perlu dimasak oleh penjual di Dapur
-  const pendingCookingCount = orders.filter((o) => o.status === "COOKING").length;
+  const isBuyer = currentUser?.role === "BUYER";
+  const cartCount = isMounted ? getTotalItems() : 0;
+  const activeOrder = isMounted && currentUser ? getActiveOrderForBuyer(currentUser.id) : null;
+  const pendingCookingCount = isMounted ? orders.filter((o) => o.status === "COOKING").length : 0;
 
   if (isBuyer) {
     return (

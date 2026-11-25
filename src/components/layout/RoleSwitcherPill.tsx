@@ -1,15 +1,20 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { UserCheck, Store, RefreshCw } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function RoleSwitcherPill() {
+  const [isMounted, setIsMounted] = useState(false);
   const { currentUser, switchRole } = useAuthStore();
   const router = useRouter();
-  const pathname = usePathname();
 
-  if (!currentUser) return null;
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted || !currentUser) return null;
 
   const isBuyer = currentUser.role === "BUYER";
 

@@ -1,19 +1,23 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { useOrderStore } from "@/stores/orderStore";
 import { ChevronRight, Sparkles, Box } from "lucide-react";
-import Link from "next/navigation";
 import { useRouter, usePathname } from "next/navigation";
 
 export default function ActiveOrderPill() {
+  const [isMounted, setIsMounted] = useState(false);
   const { currentUser } = useAuthStore();
   const { getActiveOrderForBuyer } = useOrderStore();
   const router = useRouter();
   const pathname = usePathname();
 
-  // Hanya tampilkan jika user adalah BUYER dan sedang tidak di halaman detail pesanan
-  if (!currentUser || currentUser.role !== "BUYER" || pathname.startsWith("/orders")) {
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted || !currentUser || currentUser.role !== "BUYER" || pathname.startsWith("/orders")) {
     return null;
   }
 
