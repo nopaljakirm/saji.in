@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { useOrderStore } from "@/stores/orderStore";
 import { useStandStore } from "@/stores/standStore";
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 
 export default function SellerDapurPage() {
+  const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [filterTab, setFilterTab] = useState<"ALL" | "COOKING" | "READY">("ALL");
 
@@ -30,16 +32,18 @@ export default function SellerDapurPage() {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) {
+  // Proteksi di dalam useEffect
+  useEffect(() => {
+    if (isMounted && (!currentUser || currentUser.role !== "SELLER")) {
+      router.replace("/login");
+    }
+  }, [isMounted, currentUser, router]);
+
+  if (!isMounted || !currentUser || currentUser.role !== "SELLER") {
     return (
-      <div className="flex-1 flex flex-col justify-between min-h-screen">
-        <header className="p-4 bg-surface border-b border-border flex items-center justify-between">
-          <h1 className="font-bold text-foreground text-base">Dapur KDS...</h1>
-        </header>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-        <BottomNav />
+      <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
+        <span className="text-xs text-foreground-secondary">Memuat Dapur KDS...</span>
       </div>
     );
   }

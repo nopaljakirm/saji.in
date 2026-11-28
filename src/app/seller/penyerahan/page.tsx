@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores/authStore";
 import { useOrderStore } from "@/stores/orderStore";
 import BottomNav from "@/components/layout/BottomNav";
 import {
@@ -14,6 +16,7 @@ import {
 } from "lucide-react";
 
 export default function SellerPenyerahanPage() {
+  const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [inputCode, setInputCode] = useState("");
   const [verificationResult, setVerificationResult] = useState<{
@@ -21,13 +24,28 @@ export default function SellerPenyerahanPage() {
     message: string;
   } | null>(null);
 
-  const { orders, updateOrderStatus, verifyPickupPin } = useOrderStore();
+  const { currentUser } = useAuthStore();
+  const { orders, updateOrderStatus } = useOrderStore();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) return null;
+  // Proteksi di dalam useEffect
+  useEffect(() => {
+    if (isMounted && (!currentUser || currentUser.role !== "SELLER")) {
+      router.replace("/login");
+    }
+  }, [isMounted, currentUser, router]);
+
+  if (!isMounted || !currentUser || currentUser.role !== "SELLER") {
+    return (
+      <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
+        <span className="text-xs text-foreground-secondary">Memuat Penyerahan...</span>
+      </div>
+    );
+  }
 
   const rackOrders = orders.filter((o) => o.status === "READY_IN_RACK");
 

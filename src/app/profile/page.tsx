@@ -36,19 +36,20 @@ export default function ProfilePage() {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) {
+  // Proteksi di dalam useEffect
+  useEffect(() => {
+    if (isMounted && !currentUser) {
+      router.replace("/login");
+    }
+  }, [isMounted, currentUser, router]);
+
+  if (!isMounted || !currentUser) {
     return (
       <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
         <span className="text-xs text-foreground-secondary">Memuat Profil...</span>
       </div>
     );
-  }
-
-  // Jika belum login, arahkan ke login
-  if (!currentUser) {
-    router.push("/login");
-    return null;
   }
 
   const handleTopUpSubmit = () => {
@@ -59,7 +60,7 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     logout();
-    router.push("/login");
+    router.replace("/login");
   };
 
   const allergyOptions = ["Kacang", "Seafood / Udang", "Telur", "Susu Sapi", "Gluten / Terigu", "Pedas Ekstrem"];

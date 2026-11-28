@@ -42,11 +42,20 @@ export default function SellerMenuPage() {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) return null;
+  // Proteksi di dalam useEffect
+  useEffect(() => {
+    if (isMounted && (!currentUser || currentUser.role !== "SELLER")) {
+      router.replace("/login");
+    }
+  }, [isMounted, currentUser, router]);
 
-  if (!currentUser || currentUser.role !== "SELLER") {
-    router.push("/login");
-    return null;
+  if (!isMounted || !currentUser || currentUser.role !== "SELLER") {
+    return (
+      <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
+        <span className="text-xs text-foreground-secondary">Memuat Menu Stand...</span>
+      </div>
+    );
   }
 
   const currentStand = stands.find((s) => s.id === (currentUser.standId || "stand-1")) || stands[0];

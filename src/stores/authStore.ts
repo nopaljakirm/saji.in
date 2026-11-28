@@ -21,18 +21,9 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      // Default awal login Mahasiswa sesuai Figma (Alif Raditya Pratama)
-      currentUser: {
-        id: "user-buyer-1",
-        name: "Alif Raditya Pratama",
-        email: "alif.raditya@student.ub.ac.id",
-        role: "BUYER",
-        nim: "225150200111",
-        faculty: "FILKOM UB",
-        balance: 84500, // Rp 84.500 persis seperti di Figma
-        allergies: ["Kacang"],
-      },
-      isAuthenticated: true,
+      // Default awal: Belum login (null) agar alur selalu dimulai dari halaman Login sesuai permintaan
+      currentUser: null,
+      isAuthenticated: false,
 
       login: (email, role) => {
         if (role === "BUYER") {
@@ -44,7 +35,7 @@ export const useAuthStore = create<AuthState>()(
               role: "BUYER",
               nim: "225150200111",
               faculty: "FILKOM UB",
-              balance: 84500,
+              balance: 84500, // Rp 84.500 persis seperti di Figma
               allergies: ["Kacang"],
             },
             isAuthenticated: true,
@@ -73,7 +64,7 @@ export const useAuthStore = create<AuthState>()(
           role: "BUYER",
           nim: data.nim,
           faculty: data.faculty,
-          balance: 50000, // Saldo awal pendaftaran Rp 50.000
+          balance: 50000, // Bonus saldo awal pendaftaran Rp 50.000
           allergies: [],
         };
         set({ currentUser: newUser, isAuthenticated: true });

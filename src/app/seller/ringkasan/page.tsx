@@ -32,19 +32,20 @@ export default function SellerRingkasanPage() {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) {
+  // Proteksi rute aman di dalam useEffect
+  useEffect(() => {
+    if (isMounted && (!currentUser || currentUser.role !== "SELLER")) {
+      router.replace("/login");
+    }
+  }, [isMounted, currentUser, router]);
+
+  if (!isMounted || !currentUser || currentUser.role !== "SELLER") {
     return (
       <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
         <span className="text-xs text-foreground-secondary">Memuat Ringkasan Operasional...</span>
       </div>
     );
-  }
-
-  // Jika bukan SELLER, alihkan
-  if (!currentUser || currentUser.role !== "SELLER") {
-    router.push("/login");
-    return null;
   }
 
   const currentStand = stands.find((s) => s.id === (currentUser.standId || "stand-1")) || stands[0];

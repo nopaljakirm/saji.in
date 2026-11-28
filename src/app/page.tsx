@@ -36,6 +36,27 @@ export default function HomePage() {
     setIsMounted(true);
   }, []);
 
+  // PROTEKSI RUTE & PENGALIHAN DI DALAM useEffect (Mencegah Loop & Error Render)
+  useEffect(() => {
+    if (isMounted) {
+      if (!currentUser) {
+        router.replace("/login");
+      } else if (currentUser.role === "SELLER") {
+        router.replace("/seller/ringkasan");
+      }
+    }
+  }, [isMounted, currentUser, router]);
+
+  // Tunggu sampai browser siap atau selama proses pengalihan
+  if (!isMounted || !currentUser || currentUser.role === "SELLER") {
+    return (
+      <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
+        <span className="text-xs text-foreground-secondary">Menyiapkan Saji.in...</span>
+      </div>
+    );
+  }
+
   // Filter Stan & Menu
   const filteredMenuItems = menuItems.filter((item) => {
     const matchesStand = selectedStandId === "all" || item.standId === selectedStandId;
@@ -44,27 +65,6 @@ export default function HomePage() {
       item.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStand && matchesSearch;
   });
-
-  if (!isMounted) {
-    return (
-      <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
-        <span className="text-xs text-foreground-secondary">Memuat Saji.in...</span>
-      </div>
-    );
-  }
-
-  // Jika user belum login, alihkan ke login
-  if (!currentUser) {
-    router.push("/login");
-    return null;
-  }
-
-  // Jika role SELLER, alihkan langsung ke dashboard seller
-  if (currentUser.role === "SELLER") {
-    router.push("/seller/ringkasan");
-    return null;
-  }
 
   return (
     <div className="flex-1 flex flex-col justify-between min-h-screen">
