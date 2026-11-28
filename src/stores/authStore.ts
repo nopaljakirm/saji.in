@@ -1,58 +1,137 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { User, UserRole } from "@/types";
-import { mockUsers } from "@/data/mockData";
+
+export interface ExtendedUser extends User {
+  balance?: number; // Saldo SajiPay Mahasiswa
+}
 
 interface AuthState {
-  currentUser: User | null;
+  currentUser: ExtendedUser | null;
   isAuthenticated: boolean;
-  login: (role: UserRole, email?: string) => void;
-  logout: () => void;
-  switchRole: (role: UserRole) => void;
+  login: (email: string, role: UserRole) => boolean;
+  registerBuyer: (data: { name: string; email: string; nim: string; faculty: string }) => void;
+  registerSeller: (data: { name: string; email: string; standName: string; standLocation: string; category: string }) => string;
+  topUpBalance: (amount: number) => void;
+  deductBalance: (amount: number) => boolean;
   updateAllergies: (allergies: string[]) => void;
+  logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      // Default awal login sebagai Mahasiswa (Raven) untuk kemudahan development
-      currentUser: mockUsers[0],
+      // Default awal login Mahasiswa sesuai Figma (Alif Raditya Pratama)
+      currentUser: {
+        id: "user-buyer-1",
+        name: "Alif Raditya Pratama",
+        email: "alif.raditya@student.ub.ac.id",
+        role: "BUYER",
+        nim: "225150200111",
+        faculty: "FILKOM UB",
+        balance: 84500, // Rp 84.500 persis seperti di Figma
+        allergies: ["Kacang"],
+      },
       isAuthenticated: true,
 
-      login: (role: UserRole, email?: string) => {
-        const user = mockUsers.find((u) => u.role === role) || {
-          id: `user-${Date.now()}`,
-          name: role === "BUYER" ? "Mahasiswa FILKOM" : "Mitra Penjual",
-          email: email || (role === "BUYER" ? "mhs@student.ub.ac.id" : "kantin@filkom.ub.ac.id"),
-          role,
-          nim: role === "BUYER" ? "235150201111001" : undefined,
-          standId: role === "SELLER" ? "stand-1" : undefined,
+      login: (email, role) => {
+        if (role === "BUYER") {
+          set({
+            currentUser: {
+              id: "user-buyer-1",
+              name: "Alif Raditya Pratama",
+              email: email || "alif.raditya@student.ub.ac.id",
+              role: "BUYER",
+              nim: "225150200111",
+              faculty: "FILKOM UB",
+              balance: 84500,
+              allergies: ["Kacang"],
+            },
+            isAuthenticated: true,
+          });
+          return true;
+        } else {
+          set({
+            currentUser: {
+              id: "user-seller-1",
+              name: "Warung Bu Siti",
+              email: email || "busiti.filkom@gmail.com",
+              role: "SELLER",
+              standId: "stand-1",
+            },
+            isAuthenticated: true,
+          });
+          return true;
+        }
+      },
+
+      registerBuyer: (data) => {
+        const newUser: ExtendedUser = {
+          id: `buyer-${Date.now()}`,
+          name: data.name,
+          email: data.email,
+          role: "BUYER",
+          nim: data.nim,
+          faculty: data.faculty,
+          balance: 50000, // Saldo awal pendaftaran Rp 50.000
+          allergies: [],
         };
-        set({ currentUser: user, isAuthenticated: true });
+        set({ currentUser: newUser, isAuthenticated: true });
+      },
+
+      registerSeller: (data) => {
+        const newStandId = `stand-${Date.now()}`;
+        const newUser: ExtendedUser = {
+          id: `seller-${Date.now()}`,
+          name: data.name,
+          email: data.email,
+          role: "SELLER",
+          standId: newStandId,
+        };
+        set({ currentUser: newUser, isAuthenticated: true });
+        return newStandId;
+      },
+
+      topUpBalance: (amount) => {
+        const user = get().currentUser;
+        if (user && user.role === "BUYER") {
+          set({
+            currentUser: {
+              ...user,
+              balance: (user.balance || 0) + amount,
+            },
+          });
+        }
+      },
+
+      deductBalance: (amount) => {
+        const user = get().currentUser;
+        if (user && (user.balance || 0) >= amount) {
+          set({
+            currentUser: {
+              ...user,
+              balance: (user.balance || 0) - amount,
+            },
+          });
+          return true;
+        }
+        return false;
+      },
+
+      updateAllergies: (allergies: string[]) => {
+        const user = get().currentUser;
+        if (user) {
+          set({
+            currentUser: {
+              ...user,
+              allergies,
+            },
+          });
+        }
       },
 
       logout: () => {
         set({ currentUser: null, isAuthenticated: false });
-      },
-
-      // Fungsi saklar instan untuk demo IMK (ganti Pembeli <-> Penjual dalam 1 klik)
-      switchRole: (role: UserRole) => {
-        const targetUser = mockUsers.find((u) => u.role === role) || {
-          id: `user-${role.toLowerCase()}`,
-          name: role === "BUYER" ? "Raven Pratama" : "Pak Bambang (Stan 01)",
-          email: role === "BUYER" ? "raven@student.ub.ac.id" : "bambang.filkom@gmail.com",
-          role,
-          nim: role === "BUYER" ? "235150201111045" : undefined,
-          standId: role === "SELLER" ? "stand-1" : undefined,
-        };
-        set({ currentUser: targetUser, isAuthenticated: true });
-      },
-
-      updateAllergies: (allergies: string[]) => {
-        const current = get().currentUser;
-        if (current) {
-          set({ currentUser: { ...current, allergies } });
-        }
       },
     }),
     {

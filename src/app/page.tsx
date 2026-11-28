@@ -1,26 +1,30 @@
 "use client";
 
-import { useState } from "react";
-import { mockStands, mockMenuItems } from "@/data/mockData";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MenuItem, Stand } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
-import RoleSwitcherPill from "@/components/layout/RoleSwitcherPill";
+import { useStandStore } from "@/stores/standStore";
 import BottomNav from "@/components/layout/BottomNav";
 import ActiveOrderPill from "@/components/buyer/ActiveOrderPill";
 import MenuCustomizeModal from "@/components/buyer/MenuCustomizeModal";
 import {
   MapPin,
   Search,
-  Star,
-  Clock,
   Plus,
   Sparkles,
   UtensilsCrossed,
-  SlidersHorizontal,
+  Wallet,
+  AlertCircle,
 } from "lucide-react";
 
 export default function HomePage() {
+  const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
   const { currentUser } = useAuthStore();
+  const { stands, menuItems } = useStandStore();
+
   const [selectedStandId, setSelectedStandId] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedMenuToCustomize, setSelectedMenuToCustomize] = useState<{
@@ -28,8 +32,12 @@ export default function HomePage() {
     standName: string;
   } | null>(null);
 
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Filter Stan & Menu
-  const filteredMenuItems = mockMenuItems.filter((item) => {
+  const filteredMenuItems = menuItems.filter((item) => {
     const matchesStand = selectedStandId === "all" || item.standId === selectedStandId;
     const matchesSearch =
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -37,11 +45,31 @@ export default function HomePage() {
     return matchesStand && matchesSearch;
   });
 
+  if (!isMounted) {
+    return (
+      <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
+        <span className="text-xs text-foreground-secondary">Memuat Saji.in...</span>
+      </div>
+    );
+  }
+
+  // Jika user belum login, alihkan ke login
+  if (!currentUser) {
+    router.push("/login");
+    return null;
+  }
+
+  // Jika role SELLER, alihkan langsung ke dashboard seller
+  if (currentUser.role === "SELLER") {
+    router.push("/seller/ringkasan");
+    return null;
+  }
+
   return (
     <div className="flex-1 flex flex-col justify-between min-h-screen">
-      {/* Konten Atas Scrollable */}
       <div className="flex-1 pb-6 overflow-y-auto no-scrollbar">
-        {/* Header App */}
+        {/* Header App Mahasiswa */}
         <header className="p-4 bg-surface border-b border-border sticky top-0 z-20">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -54,8 +82,19 @@ export default function HomePage() {
               </h1>
             </div>
 
-            {/* Widget Ganti Mode Pembeli / Penjual */}
-            <RoleSwitcherPill />
+            {/* Pill Saldo SajiPay (Klik untuk langsung ke Profil/TopUp) */}
+            <Link
+              href="/profile"
+              className="bg-primary-soft border border-primary/20 px-3 py-1.5 rounded-pill shadow-xs flex items-center gap-1.5 hover:bg-primary-soft/80 transition"
+              title="Saldo SajiPay Mahasiswa"
+            >
+              <Wallet size={14} className="text-primary" />
+              <div className="text-right">
+                <span className="text-[11px] font-bold text-primary-deep block leading-tight font-mono">
+                  Rp {(currentUser?.balance || 0).toLocaleString("id-ID")}
+                </span>
+              </div>
+            </Link>
           </div>
 
           {/* Kolom Pencarian */}
@@ -89,7 +128,9 @@ export default function HomePage() {
         <div className="mt-5">
           <div className="px-4 flex items-center justify-between mb-2.5">
             <h3 className="font-bold text-foreground text-sm">Pilihan Stan Kantin</h3>
-            <span className="text-[11px] text-foreground-secondary">{mockStands.length} Stan Buka</span>
+            <span className="text-[11px] text-foreground-secondary">
+              {stands.filter((s) => s.isOpen).length} Stan Buka
+            </span>
           </div>
 
           <div className="flex gap-2.5 overflow-x-auto px-4 no-scrollbar pb-1">
@@ -104,7 +145,7 @@ export default function HomePage() {
               Semua Menu
             </button>
 
-            {mockStands.map((stand) => (
+            {stands.map((stand) => (
               <button
                 key={stand.id}
                 onClick={() => setSelectedStandId(stand.id)}
@@ -112,10 +153,16 @@ export default function HomePage() {
                   selectedStandId === stand.id
                     ? "bg-primary text-white shadow-sm"
                     : "bg-surface border border-border text-foreground hover:bg-foreground/5"
-                }`}
+                } ${!stand.isOpen ? "opacity-60" : ""}`}
               >
                 <span>{stand.name.split(" ")[0]}</span>
-                <span className="text-[10px] opacity-75">★ {stand.rating}</span>
+                {!stand.isOpen ? (
+                  <span className="text-[9px] bg-status-danger-soft text-status-danger px-1.5 py-0.2 rounded-pill font-bold">
+                    Tutup
+                  </span>
+                ) : (
+                  <span className="text-[10px] opacity-75">★ {stand.rating}</span>
+                )}
               </button>
             ))}
           </div>
@@ -127,18 +174,36 @@ export default function HomePage() {
 
           <div className="space-y-3">
             {filteredMenuItems.map((item) => {
-              const stand = mockStands.find((s) => s.id === item.standId);
+              const stand = stands.find((s) => s.id === item.standId);
+              const isStandClosed = stand ? !stand.isOpen : false;
+              const isOutOfStock = item.stockStatus === "HABIS";
 
               return (
                 <div
                   key={item.id}
-                  className="p-3 bg-surface rounded-card border border-border shadow-xs flex gap-3 hover:border-primary/40 transition"
+                  className={`p-3 bg-surface rounded-card border shadow-xs flex gap-3 transition ${
+                    isStandClosed || isOutOfStock
+                      ? "opacity-65 border-border bg-background/50"
+                      : "border-border hover:border-primary/40"
+                  }`}
                 >
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-22 h-22 rounded-card object-cover shrink-0 border border-border/50"
-                  />
+                  <div className="relative shrink-0">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-22 h-22 rounded-card object-cover border border-border/50"
+                    />
+                    {isStandClosed && (
+                      <span className="absolute inset-0 bg-black/50 backdrop-blur-xs rounded-card flex items-center justify-center text-[10px] text-white font-bold text-center px-1">
+                        Stan Tutup
+                      </span>
+                    )}
+                    {!isStandClosed && isOutOfStock && (
+                      <span className="absolute inset-0 bg-black/50 backdrop-blur-xs rounded-card flex items-center justify-center text-[10px] text-white font-bold text-center px-1">
+                        Habis
+                      </span>
+                    )}
+                  </div>
 
                   <div className="flex-1 flex flex-col justify-between">
                     <div>
@@ -146,7 +211,7 @@ export default function HomePage() {
                         <h4 className="font-bold text-foreground text-xs leading-snug">
                           {item.name}
                         </h4>
-                        {item.isPopular && (
+                        {item.isPopular && !isStandClosed && (
                           <span className="bg-primary-soft text-primary-deep text-[9px] font-bold px-1.5 py-0.5 rounded-pill shrink-0">
                             Favorit
                           </span>
@@ -167,18 +232,28 @@ export default function HomePage() {
                         Rp {item.price.toLocaleString("id-ID")}
                       </span>
 
-                      <button
-                        onClick={() =>
-                          setSelectedMenuToCustomize({
-                            item,
-                            standName: stand?.name || "Kantin FILKOM",
-                          })
-                        }
-                        className="px-3 py-1 bg-primary-soft hover:bg-primary text-primary hover:text-white rounded-pill text-[11px] font-bold transition flex items-center gap-1 active:scale-95"
-                      >
-                        <Plus size={12} />
-                        Tambah
-                      </button>
+                      {isStandClosed ? (
+                        <span className="text-[10px] text-status-danger font-semibold flex items-center gap-1">
+                          <AlertCircle size={11} /> Stan Tutup
+                        </span>
+                      ) : isOutOfStock ? (
+                        <span className="text-[10px] text-foreground-secondary font-semibold">
+                          Stok Habis
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() =>
+                            setSelectedMenuToCustomize({
+                              item,
+                              standName: stand?.name || "Kantin FILKOM",
+                            })
+                          }
+                          className="px-3 py-1 bg-primary-soft hover:bg-primary text-primary hover:text-white rounded-pill text-[11px] font-bold transition flex items-center gap-1 active:scale-95"
+                        >
+                          <Plus size={12} />
+                          Tambah
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

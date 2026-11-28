@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useOrderStore } from "@/stores/orderStore";
 import BottomNav from "@/components/layout/BottomNav";
-import RoleSwitcherPill from "@/components/layout/RoleSwitcherPill";
 import {
   PackageCheck,
   Search,
@@ -11,6 +10,7 @@ import {
   CheckCircle2,
   Box,
   AlertCircle,
+  Store,
 } from "lucide-react";
 
 export default function SellerPenyerahanPage() {
@@ -31,12 +31,10 @@ export default function SellerPenyerahanPage() {
 
   const rackOrders = orders.filter((o) => o.status === "READY_IN_RACK");
 
-  // Handler Verifikasi Pengambilan Mahasiswa
   const handleVerify = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputCode.trim()) return;
 
-    // Cek apakah input berupa PIN 4 digit atau ID Pesanan (KTN-xxxx)
     const targetOrder = orders.find(
       (o) =>
         (o.pickupPin === inputCode.trim() || o.id.toLowerCase() === inputCode.trim().toLowerCase()) &&
@@ -62,17 +60,20 @@ export default function SellerPenyerahanPage() {
     <div className="flex-1 flex flex-col justify-between min-h-screen">
       <div className="flex-1 pb-6 overflow-y-auto no-scrollbar">
         {/* Header */}
-        <header className="p-4 bg-surface border-b border-border sticky top-0 z-20">
-          <div className="flex items-center justify-between mb-2">
+        <header className="p-4 bg-surface border-b border-border sticky top-0 z-20 shadow-xs">
+          <div className="flex items-center justify-between">
             <div>
-              <span className="text-[10px] font-bold text-status-success uppercase tracking-wider">
-                Smart Locker Management
+              <span className="text-[10px] font-bold text-status-success uppercase tracking-wider flex items-center gap-1">
+                <Store size={12} /> Smart Locker Management
               </span>
               <h1 className="text-base font-bold text-foreground">
                 Verifikasi Penyerahan
               </h1>
             </div>
-            <RoleSwitcherPill />
+
+            <div className="w-8 h-8 rounded-full bg-primary-soft text-primary-deep font-bold text-xs flex items-center justify-center">
+              BS
+            </div>
           </div>
         </header>
 

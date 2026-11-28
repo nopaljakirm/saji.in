@@ -23,7 +23,6 @@ interface OrderState {
 export const useOrderStore = create<OrderState>()(
   persist(
     (set, get) => ({
-      // Dimulai dengan data sample KTN-0231 dari Figma
       orders: initialOrders,
 
       createOrder: (buyer, standId, standName, items, totalPrice) => {
@@ -43,7 +42,7 @@ export const useOrderStore = create<OrderState>()(
           standName,
           items,
           totalPrice,
-          status: "COOKING", // Setelah bayar QRIS langsung masuk ke tahap Sedang Dimasak
+          status: "COOKING",
           paymentMethod: "QRIS",
           paymentStatus: "PAID",
           pickupPin: randomPin,
@@ -51,36 +50,35 @@ export const useOrderStore = create<OrderState>()(
           updatedAt: timeStr,
         };
 
-        set((state) => ({
-          orders: [newOrder, ...state.orders],
-        }));
+        const updated = [newOrder, ...get().orders];
+        set({ orders: updated });
 
         return newOrder;
       },
 
-      updateOrderStatus: (orderId: string, status: OrderStatus, rackSlot?: string) => {
+      updateOrderStatus: (orderId, status, rackSlot) => {
         const now = new Date();
         const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now
           .getMinutes()
           .toString()
           .padStart(2, "0")} WIB`;
 
-        set((state) => ({
-          orders: state.orders.map((o) => {
-            if (o.id === orderId) {
-              return {
-                ...o,
-                status,
-                rackSlot: rackSlot !== undefined ? rackSlot : o.rackSlot,
-                updatedAt: timeStr,
-              };
-            }
-            return o;
-          }),
-        }));
+        const updated = get().orders.map((o) => {
+          if (o.id === orderId) {
+            return {
+              ...o,
+              status,
+              rackSlot: rackSlot !== undefined ? rackSlot : o.rackSlot,
+              updatedAt: timeStr,
+            };
+          }
+          return o;
+        });
+
+        set({ orders: updated });
       },
 
-      verifyPickupPin: (orderId: string, pin: string) => {
+      verifyPickupPin: (orderId, pin) => {
         const order = get().orders.find((o) => o.id === orderId);
         if (order && order.pickupPin === pin) {
           get().updateOrderStatus(orderId, "COMPLETED");
@@ -89,29 +87,34 @@ export const useOrderStore = create<OrderState>()(
         return false;
       },
 
-      getOrderById: (orderId: string) => {
-        return get().orders.find((o) => o.id === orderId);
-      },
-
-      getOrdersByBuyer: (buyerId: string) => {
-        return get().orders.filter((o) => o.buyerId === buyerId);
-      },
-
-      getOrdersByStand: (standId: string) => {
-        return get().orders.filter((o) => o.standId === standId);
-      },
-
-      // Mengambil pesanan aktif (yang belum selesai / dibatalkan) untuk banner floating
-      getActiveOrderForBuyer: (buyerId: string) => {
-        return get().orders.find(
+      getOrderById: (orderId) => get().orders.find((o) => o.id === orderId),
+      getOrdersByBuyer: (buyerId) => get().orders.filter((o) => o.buyerId === buyerId),
+      getOrdersByStand: (standId) => get().orders.filter((o) => o.standId === standId),
+      getActiveOrderForBuyer: (buyerId) =>
+        get().orders.find(
           (o) =>
             o.buyerId === buyerId &&
             (o.status === "COOKING" || o.status === "READY_IN_RACK" || o.status === "PENDING_PAYMENT")
-        );
-      },
+        ),
     }),
     {
       name: "sajiin-orders-storage",
     }
   )
 );
+
+// SINKRONISASI REAL-TIME ANTAR TAB BROWSER (0-DETIK)
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (event) => {
+    if (event.key === "sajiin-orders-storage" && event.newValue) {
+      try {
+        const parsed = JSON.parse(event.newValue);
+        if (parsed.state && parsed.state.orders) {
+          useOrderStore.setState({ orders: parsed.state.orders });
+        }
+      } catch (e) {
+        console.error("Gagal sinkronisasi data pesanan antar-tab", e);
+      }
+    }
+  });
+}

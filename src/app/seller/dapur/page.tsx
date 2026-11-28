@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/authStore";
 import { useOrderStore } from "@/stores/orderStore";
-import RoleSwitcherPill from "@/components/layout/RoleSwitcherPill";
+import { useStandStore } from "@/stores/standStore";
 import BottomNav from "@/components/layout/BottomNav";
 import StatusBadge from "@/components/ui/StatusBadge";
 import {
@@ -24,6 +24,7 @@ export default function SellerDapurPage() {
 
   const { currentUser } = useAuthStore();
   const { orders, updateOrderStatus } = useOrderStore();
+  const { stands } = useStandStore();
 
   useEffect(() => {
     setIsMounted(true);
@@ -43,7 +44,8 @@ export default function SellerDapurPage() {
     );
   }
 
-  // Filter pesanan milik stan ini (default stand-1)
+  const currentStand = stands.find((s) => s.id === (currentUser?.standId || "stand-1")) || stands[0];
+
   const standOrders = orders.filter(
     (o) => !currentUser?.standId || o.standId === currentUser.standId
   );
@@ -58,7 +60,6 @@ export default function SellerDapurPage() {
       ? readyOrders
       : standOrders.filter((o) => o.status === "COOKING" || o.status === "READY_IN_RACK");
 
-  // Handler Selesai Masak & Alokasikan ke Rak Cerdas
   const handleMarkReady = (orderId: string) => {
     const randomSlots = ["Rak A-01", "Rak A-02", "Rak B-01", "Rak B-02", "Rak B-03", "Rak C-01"];
     const allocatedSlot = randomSlots[Math.floor(Math.random() * randomSlots.length)];
@@ -73,13 +74,16 @@ export default function SellerDapurPage() {
           <div className="flex items-center justify-between mb-2">
             <div>
               <span className="text-[10px] font-bold text-status-success uppercase tracking-wider flex items-center gap-1">
-                <Store size={12} /> Dapur KDS • Stan 01
+                <Store size={12} /> Dapur KDS • {currentStand?.name || "Warung Bu Siti"}
               </span>
               <h1 className="text-base font-bold text-foreground">
                 Pesanan Masuk
               </h1>
             </div>
-            <RoleSwitcherPill />
+
+            <div className="w-8 h-8 rounded-full bg-primary-soft text-primary-deep font-bold text-xs flex items-center justify-center">
+              BS
+            </div>
           </div>
 
           {/* Filter Tab KDS */}
@@ -132,7 +136,6 @@ export default function SellerDapurPage() {
           ) : (
             displayedOrders.map((order) => {
               const isCooking = order.status === "COOKING";
-              const isReady = order.status === "READY_IN_RACK";
 
               return (
                 <div
@@ -143,7 +146,6 @@ export default function SellerDapurPage() {
                       : "bg-[#EAF7EF]/20 border-status-success/30"
                   }`}
                 >
-                  {/* Tiket Header */}
                   <div className="p-3.5 bg-background border-b border-border flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
@@ -167,7 +169,6 @@ export default function SellerDapurPage() {
                     </div>
                   </div>
 
-                  {/* Daftar Item Tiket Dapur */}
                   <div className="p-3.5 space-y-3">
                     {order.items.map((it, idx) => (
                       <div key={idx} className="flex items-start justify-between">
@@ -201,7 +202,6 @@ export default function SellerDapurPage() {
                     ))}
                   </div>
 
-                  {/* Footer Tombol Aksi Dapur */}
                   <div className="p-3 bg-surface border-t border-border flex items-center justify-between">
                     {isCooking ? (
                       <button

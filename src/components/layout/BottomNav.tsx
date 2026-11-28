@@ -27,144 +27,167 @@ export default function BottomNav() {
   const { getActiveOrderForBuyer, orders } = useOrderStore();
   const { getTotalItems } = useCartStore();
 
-  // Mencegah hydration mismatch antara server dan client localStorage
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Jika URL diawali /seller, PASTI tampilkan navbar penjual. Jika tidak, tampilkan navbar pembeli
+  // Jangan tampilkan di halaman login
+  if (pathname === "/login") return null;
+
+  // RUTE KETAT: Jika URL diawali /seller, PASTI tampilkan navbar penjual
   const isSellerRoute = pathname.startsWith("/seller");
-  const isBuyer = !isSellerRoute;
+
   const cartCount = isMounted ? getTotalItems() : 0;
   const activeOrder = isMounted && currentUser ? getActiveOrderForBuyer(currentUser.id) : null;
   const pendingCookingCount = isMounted ? orders.filter((o) => o.status === "COOKING").length : 0;
 
-  if (isBuyer) {
+  // NAVIGASI PENJUAL (SELLER)
+  if (isSellerRoute) {
     return (
-      <nav className="h-16 bg-surface border-t border-border flex items-center justify-around px-2 z-30">
+      <nav className="h-16 bg-surface border-t border-border flex items-center justify-around px-2 z-30 shrink-0">
         <Link
-          href="/"
+          href="/seller/ringkasan"
           className={`flex flex-col items-center gap-1 transition ${
-            pathname === "/" ? "text-primary font-semibold" : "text-foreground-secondary hover:text-foreground"
+            pathname === "/seller/ringkasan"
+              ? "text-primary font-semibold"
+              : "text-foreground-secondary hover:text-foreground"
           }`}
         >
-          <Home size={20} />
-          <span className="text-[10px]">Beranda</span>
+          <LayoutDashboard size={20} />
+          <span className="text-[10px]">Ringkasan</span>
         </Link>
 
         <Link
-          href="/cart"
+          href="/seller/dapur"
           className={`flex flex-col items-center gap-1 relative transition ${
-            pathname === "/cart" ? "text-primary font-semibold" : "text-foreground-secondary hover:text-foreground"
+            pathname === "/seller/dapur"
+              ? "text-primary font-semibold"
+              : "text-foreground-secondary hover:text-foreground"
           }`}
         >
           <div className="relative">
-            <ShoppingCart size={20} />
-            {cartCount > 0 && (
+            <ChefHat size={20} />
+            {pendingCookingCount > 0 && (
               <span className="absolute -top-1 -right-2 bg-primary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                {cartCount}
+                {pendingCookingCount}
               </span>
             )}
           </div>
-          <span className="text-[10px]">Keranjang</span>
+          <span className="text-[10px]">Dapur KDS</span>
         </Link>
 
         <Link
-          href="/orders"
-          className={`flex flex-col items-center gap-1 relative transition ${
-            pathname.startsWith("/orders") ? "text-primary font-semibold" : "text-foreground-secondary hover:text-foreground"
-          }`}
-        >
-          <div className="relative">
-            <Clock size={20} />
-            {activeOrder && (
-              <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 bg-status-warning rounded-full animate-ping" />
-            )}
-          </div>
-          <span className="text-[10px]">Pesanan</span>
-        </Link>
-
-        <Link
-          href="/history"
+          href="/seller/penyerahan"
           className={`flex flex-col items-center gap-1 transition ${
-            pathname === "/history" ? "text-primary font-semibold" : "text-foreground-secondary hover:text-foreground"
+            pathname === "/seller/penyerahan"
+              ? "text-primary font-semibold"
+              : "text-foreground-secondary hover:text-foreground"
           }`}
         >
-          <History size={20} />
-          <span className="text-[10px]">Riwayat</span>
+          <PackageCheck size={20} />
+          <span className="text-[10px]">Penyerahan</span>
         </Link>
 
         <Link
-          href="/profile"
+          href="/seller/menu"
           className={`flex flex-col items-center gap-1 transition ${
-            pathname === "/profile" ? "text-primary font-semibold" : "text-foreground-secondary hover:text-foreground"
+            pathname === "/seller/menu"
+              ? "text-primary font-semibold"
+              : "text-foreground-secondary hover:text-foreground"
           }`}
         >
-          <User size={20} />
-          <span className="text-[10px]">Profil</span>
+          <UtensilsCrossed size={20} />
+          <span className="text-[10px]">Menu</span>
+        </Link>
+
+        <Link
+          href="/seller/stand"
+          className={`flex flex-col items-center gap-1 transition ${
+            pathname === "/seller/stand"
+              ? "text-primary font-semibold"
+              : "text-foreground-secondary hover:text-foreground"
+          }`}
+        >
+          <Store size={20} />
+          <span className="text-[10px]">Stan</span>
         </Link>
       </nav>
     );
   }
 
-  // Tampilan Bottom Bar Penjual (SellerApp)
+  // NAVIGASI PEMBELI (MAHASISWA)
   return (
-    <nav className="h-16 bg-surface border-t border-border flex items-center justify-around px-2 z-30">
+    <nav className="h-16 bg-surface border-t border-border flex items-center justify-around px-2 z-30 shrink-0">
       <Link
-        href="/seller/ringkasan"
+        href="/"
         className={`flex flex-col items-center gap-1 transition ${
-          pathname === "/seller/ringkasan" ? "text-primary font-semibold" : "text-foreground-secondary hover:text-foreground"
+          pathname === "/"
+            ? "text-primary font-semibold"
+            : "text-foreground-secondary hover:text-foreground"
         }`}
       >
-        <LayoutDashboard size={20} />
-        <span className="text-[10px]">Ringkasan</span>
+        <Home size={20} />
+        <span className="text-[10px]">Beranda</span>
       </Link>
 
       <Link
-        href="/seller/dapur"
+        href="/cart"
         className={`flex flex-col items-center gap-1 relative transition ${
-          pathname === "/seller/dapur" ? "text-primary font-semibold" : "text-foreground-secondary hover:text-foreground"
+          pathname === "/cart"
+            ? "text-primary font-semibold"
+            : "text-foreground-secondary hover:text-foreground"
         }`}
       >
         <div className="relative">
-          <ChefHat size={20} />
-          {pendingCookingCount > 0 && (
+          <ShoppingCart size={20} />
+          {cartCount > 0 && (
             <span className="absolute -top-1 -right-2 bg-primary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-              {pendingCookingCount}
+              {cartCount}
             </span>
           )}
         </div>
-        <span className="text-[10px]">Dapur KDS</span>
+        <span className="text-[10px]">Keranjang</span>
       </Link>
 
       <Link
-        href="/seller/penyerahan"
-        className={`flex flex-col items-center gap-1 transition ${
-          pathname === "/seller/penyerahan" ? "text-primary font-semibold" : "text-foreground-secondary hover:text-foreground"
+        href="/orders"
+        className={`flex flex-col items-center gap-1 relative transition ${
+          pathname.startsWith("/orders")
+            ? "text-primary font-semibold"
+            : "text-foreground-secondary hover:text-foreground"
         }`}
       >
-        <PackageCheck size={20} />
-        <span className="text-[10px]">Penyerahan</span>
+        <div className="relative">
+          <Clock size={20} />
+          {activeOrder && (
+            <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 bg-status-warning rounded-full animate-ping" />
+          )}
+        </div>
+        <span className="text-[10px]">Pesanan</span>
       </Link>
 
       <Link
-        href="/seller/menu"
+        href="/history"
         className={`flex flex-col items-center gap-1 transition ${
-          pathname === "/seller/menu" ? "text-primary font-semibold" : "text-foreground-secondary hover:text-foreground"
+          pathname === "/history"
+            ? "text-primary font-semibold"
+            : "text-foreground-secondary hover:text-foreground"
         }`}
       >
-        <UtensilsCrossed size={20} />
-        <span className="text-[10px]">Menu</span>
+        <History size={20} />
+        <span className="text-[10px]">Riwayat</span>
       </Link>
 
       <Link
-        href="/seller/stand"
+        href="/profile"
         className={`flex flex-col items-center gap-1 transition ${
-          pathname === "/seller/stand" ? "text-primary font-semibold" : "text-foreground-secondary hover:text-foreground"
+          pathname === "/profile"
+            ? "text-primary font-semibold"
+            : "text-foreground-secondary hover:text-foreground"
         }`}
       >
-        <Store size={20} />
-        <span className="text-[10px]">Stan</span>
+        <User size={20} />
+        <span className="text-[10px]">Profil</span>
       </Link>
     </nav>
   );

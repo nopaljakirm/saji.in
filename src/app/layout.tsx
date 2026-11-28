@@ -1,12 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-plus-jakarta",
-});
 
 export const metadata: Metadata = {
   title: "Saji.in - Kantin Cerdas FILKOM UB",
@@ -20,8 +13,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className={`${plusJakartaSans.variable} font-sans min-h-screen bg-[#F8F7F4]`}>
-        {/* Container pembungkus utama agar di layar laptop/desktop tetap di tengah seperti HP (430px) */}
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="font-sans min-h-screen bg-[#F8F7F4]">
         <div className="flex justify-center min-h-screen">
           <div className="w-full max-w-[430px] min-h-screen bg-[#F8F7F4] relative shadow-lg flex flex-col border-x border-[#E8E5E0]">
             {children}
