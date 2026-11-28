@@ -56,6 +56,7 @@ export const useCartStore = create<CartState>()(
           newItems = [
             ...items,
             {
+              id: `cart-${menuItem.id}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
               menuItem,
               quantity,
               selectedHeat: options.selectedHeat,
@@ -74,9 +75,11 @@ export const useCartStore = create<CartState>()(
         return { success: true };
       },
 
-      removeItem: (menuItemId: string) => {
+      removeItem: (idOrMenuId: string) => {
         const { items } = get();
-        const filtered = items.filter((item) => item.menuItem.id !== menuItemId);
+        const filtered = items.filter(
+          (item) => item.id !== idOrMenuId && item.menuItem.id !== idOrMenuId
+        );
         set({
           items: filtered,
           standId: filtered.length === 0 ? null : get().standId,
@@ -84,14 +87,16 @@ export const useCartStore = create<CartState>()(
         });
       },
 
-      updateQuantity: (menuItemId: string, quantity: number) => {
+      updateQuantity: (idOrMenuId: string, quantity: number) => {
         const { items } = get();
         if (quantity <= 0) {
-          get().removeItem(menuItemId);
+          get().removeItem(idOrMenuId);
           return;
         }
         const updated = items.map((item) =>
-          item.menuItem.id === menuItemId ? { ...item, quantity } : item
+          item.id === idOrMenuId || (!item.id && item.menuItem.id === idOrMenuId)
+            ? { ...item, quantity }
+            : item
         );
         set({ items: updated });
       },

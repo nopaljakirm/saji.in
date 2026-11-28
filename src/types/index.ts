@@ -44,6 +44,7 @@ export interface MenuItem {
 
 // Item di Dalam Keranjang Belanja
 export interface CartItem {
+  id?: string;               // ID unik per item di keranjang (mencegah duplicate key)
   menuItem: MenuItem;
   quantity: number;
   selectedHeat?: string;     // Misal: "Sedang (Pedas Sedang)"

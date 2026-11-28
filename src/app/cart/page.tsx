@@ -33,7 +33,7 @@ export default function CartPage() {
 
   const { items, standId, standName, updateQuantity, removeItem, clearCart, getTotalPrice } =
     useCartStore();
-  const { currentUser, deductBalance, topUpBalance } = useAuthStore();
+  const { currentUser, buyerUser, deductBalance, topUpBalance } = useAuthStore();
   const { createOrder } = useOrderStore();
   const { stands, decrementStock } = useStandStore();
 
@@ -47,6 +47,8 @@ export default function CartPage() {
     setIsMounted(true);
   }, []);
 
+  const activeBuyer = buyerUser || currentUser;
+
   const subtotal = isMounted ? getTotalPrice() : 0;
   const platformFee = 1000; // Biaya platform smart locker
   const finalTotal = subtotal > 0 ? subtotal + platformFee : 0;
@@ -55,7 +57,7 @@ export default function CartPage() {
   const activeStand = stands.find((s) => s.id === standId);
   const isStandClosed = activeStand ? !activeStand.isOpen : false;
 
-  const currentBalance = currentUser?.balance || 0;
+  const currentBalance = activeBuyer?.balance || 0;
   const isBalanceSufficient = currentBalance >= finalTotal;
 
   // Tunggu browser siap
@@ -110,7 +112,7 @@ export default function CartPage() {
 
   // Eksekusi Pesanan (Potong Stok & Potong Saldo jika SajiPay)
   const processCheckout = (method: "SAJIPAY" | "QRIS") => {
-    if (!currentUser || !standId || !standName) return;
+    if (!activeBuyer || !standId || !standName) return;
 
     if (method === "SAJIPAY") {
       if (!isBalanceSufficient) {
@@ -137,7 +139,7 @@ export default function CartPage() {
       );
 
       // 2. Buat pesanan baru ke orderStore (dapur stan yang bersangkutan langsung menerima!)
-      const newOrder = createOrder(currentUser, standId, standName, items, finalTotal, method);
+      const newOrder = createOrder(activeBuyer, standId, standName, items, finalTotal, method);
 
       // 3. Kosongkan keranjang
       clearCart();
@@ -192,70 +194,77 @@ export default function CartPage() {
 
         {/* Daftar Item Menu di Keranjang */}
         <div className="p-4 space-y-3">
-          {items.map((cartItem) => (
-            <div
-              key={cartItem.menuItem.id}
-              className="p-3 bg-surface rounded-card border border-border shadow-xs flex gap-3"
-            >
-              <img
-                src={cartItem.menuItem.image}
-                alt={cartItem.menuItem.name}
-                className="w-18 h-18 rounded-card object-cover border border-border/50 shrink-0"
-              />
+          {items.map((cartItem, index) => {
+            const itemKey =
+              cartItem.id ||
+              `${cartItem.menuItem.id}-${cartItem.selectedHeat || ""}-${cartItem.selectedPortion || ""}-${index}`;
+            const itemIdentifier = cartItem.id || cartItem.menuItem.id;
 
-              <div className="flex-1 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-bold text-foreground text-xs leading-tight">
-                      {cartItem.menuItem.name}
-                    </h3>
-                    <button
-                      onClick={() => removeItem(cartItem.menuItem.id)}
-                      className="text-foreground-secondary hover:text-status-danger transition p-0.5"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+            return (
+              <div
+                key={itemKey}
+                className="p-3 bg-surface rounded-card border border-border shadow-xs flex gap-3"
+              >
+                <img
+                  src={cartItem.menuItem.image}
+                  alt={cartItem.menuItem.name}
+                  className="w-18 h-18 rounded-card object-cover border border-border/50 shrink-0"
+                />
+
+                <div className="flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start justify-between">
+                      <h3 className="font-bold text-foreground text-xs leading-tight">
+                        {cartItem.menuItem.name}
+                      </h3>
+                      <button
+                        onClick={() => removeItem(itemIdentifier)}
+                        className="text-foreground-secondary hover:text-status-danger transition p-0.5"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+
+                    {/* Kustomisasi / Catatan */}
+                    <div className="text-[10px] text-foreground-secondary mt-1 space-y-0.5">
+                      {cartItem.selectedHeat && <div>• {cartItem.selectedHeat}</div>}
+                      {cartItem.selectedPortion && <div>• {cartItem.selectedPortion}</div>}
+                      {cartItem.kitchenNote && (
+                        <div className="italic text-primary-deep">
+                          Catatan: &ldquo;{cartItem.kitchenNote}&rdquo;
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Kustomisasi / Catatan */}
-                  <div className="text-[10px] text-foreground-secondary mt-1 space-y-0.5">
-                    {cartItem.selectedHeat && <div>• {cartItem.selectedHeat}</div>}
-                    {cartItem.selectedPortion && <div>• {cartItem.selectedPortion}</div>}
-                    {cartItem.kitchenNote && (
-                      <div className="italic text-primary-deep">
-                        Catatan: &ldquo;{cartItem.kitchenNote}&rdquo;
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between mt-2 pt-1 border-t border-border/40">
-                  <span className="font-bold text-xs text-foreground">
-                    Rp {(cartItem.menuItem.price * cartItem.quantity).toLocaleString("id-ID")}
-                  </span>
-
-                  {/* Stepper Jumlah */}
-                  <div className="flex items-center border border-border rounded-pill px-2 py-0.5 gap-2.5 bg-background">
-                    <button
-                      onClick={() => updateQuantity(cartItem.menuItem.id, cartItem.quantity - 1)}
-                      className="text-foreground-secondary hover:text-foreground"
-                    >
-                      <Minus size={12} />
-                    </button>
-                    <span className="text-xs font-bold min-w-[14px] text-center">
-                      {cartItem.quantity}
+                  <div className="flex items-center justify-between mt-2 pt-1 border-t border-border/40">
+                    <span className="font-bold text-xs text-foreground">
+                      Rp {(cartItem.menuItem.price * cartItem.quantity).toLocaleString("id-ID")}
                     </span>
-                    <button
-                      onClick={() => updateQuantity(cartItem.menuItem.id, cartItem.quantity + 1)}
-                      className="text-foreground-secondary hover:text-foreground"
-                    >
-                      <Plus size={12} />
-                    </button>
+
+                    {/* Stepper Jumlah */}
+                    <div className="flex items-center border border-border rounded-pill px-2 py-0.5 gap-2.5 bg-background">
+                      <button
+                        onClick={() => updateQuantity(itemIdentifier, cartItem.quantity - 1)}
+                        className="text-foreground-secondary hover:text-foreground"
+                      >
+                        <Minus size={12} />
+                      </button>
+                      <span className="text-xs font-bold min-w-[14px] text-center">
+                        {cartItem.quantity}
+                      </span>
+                      <button
+                        onClick={() => updateQuantity(itemIdentifier, cartItem.quantity + 1)}
+                        className="text-foreground-secondary hover:text-foreground"
+                      >
+                        <Plus size={12} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Ringkasan Pembayaran */}

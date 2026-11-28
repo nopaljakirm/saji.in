@@ -131,28 +131,28 @@ export const useAuthStore = create<AuthState>()(
 
       topUpBalance: (amount) => {
         const user = get().buyerUser || get().currentUser;
-        if (user && user.role === "BUYER") {
+        if (user) {
           const updated = {
             ...user,
             balance: (user.balance || 0) + amount,
           };
           set({
             buyerUser: updated,
-            currentUser: get().currentUser?.role === "BUYER" ? updated : get().currentUser,
+            currentUser: updated,
           });
         }
       },
 
       deductBalance: (amount) => {
         const user = get().buyerUser || get().currentUser;
-        if (user && user.role === "BUYER" && (user.balance || 0) >= amount) {
+        if (user && (user.balance || 0) >= amount) {
           const updated = {
             ...user,
             balance: (user.balance || 0) - amount,
           };
           set({
             buyerUser: updated,
-            currentUser: get().currentUser?.role === "BUYER" ? updated : get().currentUser,
+            currentUser: updated,
           });
           return true;
         }
@@ -168,7 +168,7 @@ export const useAuthStore = create<AuthState>()(
           };
           set({
             buyerUser: updated,
-            currentUser: get().currentUser?.role === "BUYER" ? updated : get().currentUser,
+            currentUser: updated,
           });
         }
       },

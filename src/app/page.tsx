@@ -82,7 +82,7 @@ export default function HomePage() {
                 <span>Kantin Gedung F • FILKOM UB</span>
               </div>
               <h1 className="text-base font-bold text-foreground mt-0.5">
-                Halo, {currentUser?.name?.split(" ")[0] || "Mahasiswa"} 👋
+                Halo, {activeBuyer?.name?.split(" ")[0] || "Mahasiswa"} 👋
               </h1>
             </div>
 
@@ -95,7 +95,7 @@ export default function HomePage() {
               <Wallet size={14} className="text-primary" />
               <div className="text-right">
                 <span className="text-[11px] font-bold text-primary-deep block leading-tight font-mono">
-                  Rp {(currentUser?.balance || 0).toLocaleString("id-ID")}
+                  Rp {(activeBuyer?.balance || 0).toLocaleString("id-ID")}
                 </span>
               </div>
             </Link>
