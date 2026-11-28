@@ -32,7 +32,9 @@ export default function BottomNav() {
     setIsMounted(true);
   }, []);
 
-  const isBuyer = currentUser?.role === "BUYER";
+  // Jika URL diawali /seller, PASTI tampilkan navbar penjual. Jika tidak, tampilkan navbar pembeli
+  const isSellerRoute = pathname.startsWith("/seller");
+  const isBuyer = !isSellerRoute;
   const cartCount = isMounted ? getTotalItems() : 0;
   const activeOrder = isMounted && currentUser ? getActiveOrderForBuyer(currentUser.id) : null;
   const pendingCookingCount = isMounted ? orders.filter((o) => o.status === "COOKING").length : 0;
