@@ -125,12 +125,12 @@ export const mockMenuItems: MenuItem[] = [
   },
 ];
 
-// Data Awal Pesanan untuk Uji Coba Simulasi (Seperti di Figma)
+// Data Awal Pesanan untuk Uji Coba Simulasi (Masing-masing stan terisolasi secara rapi)
 export const initialOrders: Order[] = [
   {
     id: "KTN-0231",
     buyerId: "user-buyer-1",
-    buyerName: "Raven Pratama",
+    buyerName: "Alif Raditya Pratama",
     standId: "stand-1",
     standName: "Ayam Geprek & Nasi Goreng FILKOM",
     items: [
@@ -142,14 +142,14 @@ export const initialOrders: Order[] = [
         kitchenNote: "Banyakin kerupuknya mas",
       },
       {
-        menuItem: mockMenuItems[3], // Es Teh
+        menuItem: mockMenuItems[1], // Ayam Geprek
         quantity: 1,
-        selectedHeat: "Es Normal",
+        selectedHeat: "Level 1 (Cabai 3)",
       },
     ],
-    totalPrice: 19000,
-    status: "COOKING", // Status: Sedang Dimasak
-    paymentMethod: "QRIS",
+    totalPrice: 29000,
+    status: "COOKING", // Status: Sedang Dimasak di Stan 01
+    paymentMethod: "SAJIPAY",
     paymentStatus: "PAID",
     rackSlot: "Rak B-03",
     pickupPin: "5821",
@@ -159,7 +159,7 @@ export const initialOrders: Order[] = [
   {
     id: "KTN-0230",
     buyerId: "user-buyer-1",
-    buyerName: "Raven Pratama",
+    buyerName: "Alif Raditya Pratama",
     standId: "stand-1",
     standName: "Ayam Geprek & Nasi Goreng FILKOM",
     items: [
@@ -170,12 +170,33 @@ export const initialOrders: Order[] = [
       },
     ],
     totalPrice: 14000,
-    status: "READY_IN_RACK", // Status: Siap Diambil di Rak
+    status: "READY_IN_RACK", // Status: Siap Diambil di Rak Stan 01
     paymentMethod: "QRIS",
     paymentStatus: "PAID",
     rackSlot: "Rak A-01",
     pickupPin: "9134",
     createdAt: "11:50 WIB",
     updatedAt: "12:05 WIB",
+  },
+  {
+    id: "KTN-0229",
+    buyerId: "user-buyer-1",
+    buyerName: "Alif Raditya Pratama",
+    standId: "stand-3",
+    standName: "Baratie Drink & Coffee",
+    items: [
+      {
+        menuItem: mockMenuItems[4], // Es Kopi Susu Aren
+        quantity: 2,
+        selectedHeat: "Dingin",
+      },
+    ],
+    totalPrice: 20000,
+    status: "COOKING", // Status: Sedang Dimasak di Stan Baratie
+    paymentMethod: "SAJIPAY",
+    paymentStatus: "PAID",
+    pickupPin: "4412",
+    createdAt: "12:10 WIB",
+    updatedAt: "12:12 WIB",
   },
 ];

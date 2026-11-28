@@ -23,7 +23,7 @@ export default function BottomNav() {
   const pathname = usePathname();
   const [isMounted, setIsMounted] = useState(false);
 
-  const { currentUser } = useAuthStore();
+  const { currentUser, buyerUser, sellerUser } = useAuthStore();
   const { getActiveOrderForBuyer, orders } = useOrderStore();
   const { getTotalItems } = useCartStore();
 
@@ -38,8 +38,14 @@ export default function BottomNav() {
   const isSellerRoute = pathname.startsWith("/seller");
 
   const cartCount = isMounted ? getTotalItems() : 0;
-  const activeOrder = isMounted && currentUser ? getActiveOrderForBuyer(currentUser.id) : null;
-  const pendingCookingCount = isMounted ? orders.filter((o) => o.status === "COOKING").length : 0;
+  const currentBuyerId = buyerUser?.id || (currentUser?.role === "BUYER" ? currentUser.id : null);
+  const activeOrder = isMounted && currentBuyerId ? getActiveOrderForBuyer(currentBuyerId) : null;
+
+  // KDS Badge Penjual: HANYA hitung pesanan milik stan yang sedang aktif
+  const currentStandId = sellerUser?.standId || (currentUser?.role === "SELLER" ? currentUser.standId : "stand-1");
+  const pendingCookingCount = isMounted
+    ? orders.filter((o) => o.standId === currentStandId && o.status === "COOKING").length
+    : 0;
 
   // NAVIGASI PENJUAL (SELLER)
   if (isSellerRoute) {

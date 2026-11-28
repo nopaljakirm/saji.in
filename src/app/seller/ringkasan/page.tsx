@@ -24,7 +24,7 @@ import {
 export default function SellerRingkasanPage() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
-  const { currentUser } = useAuthStore();
+  const { currentUser, sellerUser, isHydrated, switchSellerStand } = useAuthStore();
   const { orders } = useOrderStore();
   const { stands } = useStandStore();
 
@@ -32,14 +32,16 @@ export default function SellerRingkasanPage() {
     setIsMounted(true);
   }, []);
 
+  const activeSeller = sellerUser || (currentUser?.role === "SELLER" ? currentUser : null);
+
   // Proteksi rute aman di dalam useEffect
   useEffect(() => {
-    if (isMounted && (!currentUser || currentUser.role !== "SELLER")) {
+    if (isMounted && isHydrated && !activeSeller) {
       router.replace("/login");
     }
-  }, [isMounted, currentUser, router]);
+  }, [isMounted, isHydrated, activeSeller, router]);
 
-  if (!isMounted || !currentUser || currentUser.role !== "SELLER") {
+  if (!isMounted || !isHydrated || !activeSeller) {
     return (
       <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
@@ -48,15 +50,16 @@ export default function SellerRingkasanPage() {
     );
   }
 
-  const currentStand = stands.find((s) => s.id === (currentUser.standId || "stand-1")) || stands[0];
+  const currentStand = stands.find((s) => s.id === (activeSeller.standId || "stand-1")) || stands[0];
 
-  // Metrik Penjualan
-  const cookingCount = orders.filter((o) => o.status === "COOKING").length;
-  const readyCount = orders.filter((o) => o.status === "READY_IN_RACK").length;
-  const completedCount = orders.filter((o) => o.status === "COMPLETED").length;
-  const totalCount = orders.length;
+  // KETAT: Metrik Penjualan HANYA untuk stan ini!
+  const standOrders = orders.filter((o) => o.standId === currentStand.id);
+  const cookingCount = standOrders.filter((o) => o.status === "COOKING").length;
+  const readyCount = standOrders.filter((o) => o.status === "READY_IN_RACK").length;
+  const completedCount = standOrders.filter((o) => o.status === "COMPLETED").length;
+  const totalCount = standOrders.length;
 
-  const totalOmzet = orders
+  const totalOmzet = standOrders
     .filter((o) => o.status !== "CANCELLED")
     .reduce((sum, o) => sum + o.totalPrice, 0);
 
@@ -66,12 +69,25 @@ export default function SellerRingkasanPage() {
         {/* Header Penjual (Persis Figma) */}
         <header className="p-4 bg-surface border-b border-border sticky top-0 z-20 shadow-xs">
           <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                <Store size={14} className="text-primary" />
-                <span>{currentStand?.name || "Warung Bu Siti"}</span>
+            <div className="flex-1 mr-2">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Store size={14} className="text-primary shrink-0" />
+                <select
+                  value={currentStand.id}
+                  onChange={(e) => {
+                    const chosen = stands.find((s) => s.id === e.target.value);
+                    switchSellerStand(e.target.value, chosen?.name);
+                  }}
+                  className="bg-primary-soft text-primary-deep font-bold text-xs px-2 py-0.5 rounded-pill border border-primary/20 focus:outline-none cursor-pointer max-w-[220px] truncate"
+                >
+                  {stands.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
                 <span
-                  className={`text-[9px] font-bold px-2 py-0.5 rounded-pill ${
+                  className={`text-[9px] font-bold px-2 py-0.5 rounded-pill shrink-0 ${
                     currentStand?.isOpen
                       ? "bg-status-success-soft text-status-success"
                       : "bg-status-danger-soft text-status-danger"
@@ -80,13 +96,13 @@ export default function SellerRingkasanPage() {
                   {currentStand?.isOpen ? "● Buka" : "● Tutup"}
                 </span>
               </div>
-              <p className="text-[10px] text-foreground-secondary mt-0.5">
-                Kantin Cerdas FILKOM • Stand #04
+              <p className="text-[10px] text-foreground-secondary">
+                {currentStand.location}
               </p>
             </div>
 
-            <div className="w-8 h-8 rounded-full bg-primary-soft text-primary-deep font-bold text-xs flex items-center justify-center">
-              BS
+            <div className="w-8 h-8 rounded-full bg-primary-soft text-primary-deep font-bold text-xs flex items-center justify-center shrink-0">
+              {currentStand.name.substring(0, 2).toUpperCase()}
             </div>
           </div>
         </header>

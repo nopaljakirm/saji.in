@@ -10,7 +10,8 @@ interface OrderState {
     standId: string,
     standName: string,
     items: CartItem[],
-    totalPrice: number
+    totalPrice: number,
+    paymentMethod?: "SAJIPAY" | "QRIS"
   ) => Order;
   updateOrderStatus: (orderId: string, status: OrderStatus, rackSlot?: string) => void;
   verifyPickupPin: (orderId: string, pin: string) => boolean;
@@ -25,7 +26,7 @@ export const useOrderStore = create<OrderState>()(
     (set, get) => ({
       orders: initialOrders,
 
-      createOrder: (buyer, standId, standName, items, totalPrice) => {
+      createOrder: (buyer, standId, standName, items, totalPrice, paymentMethod = "SAJIPAY") => {
         const newOrderId = `KTN-0${Math.floor(100 + Math.random() * 900)}`;
         const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
         const now = new Date();
@@ -43,7 +44,7 @@ export const useOrderStore = create<OrderState>()(
           items,
           totalPrice,
           status: "COOKING",
-          paymentMethod: "QRIS",
+          paymentMethod,
           paymentStatus: "PAID",
           pickupPin: randomPin,
           createdAt: timeStr,

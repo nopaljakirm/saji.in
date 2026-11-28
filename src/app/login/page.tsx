@@ -21,7 +21,7 @@ import {
 export default function LoginPage() {
   const router = useRouter();
   const { login, registerBuyer, registerSeller } = useAuthStore();
-  const { addStand } = useStandStore();
+  const { stands, addStand } = useStandStore();
 
   const [authMode, setAuthMode] = useState<"LOGIN" | "REGISTER">("LOGIN");
   const [registerRole, setRegisterRole] = useState<UserRole>("BUYER");
@@ -30,6 +30,7 @@ export default function LoginPage() {
   const [loginIdentifier, setLoginIdentifier] = useState("alif.raditya@student.ub.ac.id");
   const [loginPassword, setLoginPassword] = useState("••••••••");
   const [loginRole, setLoginRole] = useState<UserRole>("BUYER");
+  const [selectedLoginStandId, setSelectedLoginStandId] = useState<string>("stand-1");
 
   // Form Register Mahasiswa
   const [buyerName, setBuyerName] = useState("");
@@ -50,7 +51,7 @@ export default function LoginPage() {
   // Submit Login
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    login(loginIdentifier, loginRole);
+    login(loginIdentifier, loginRole, selectedLoginStandId);
     if (loginRole === "BUYER") {
       router.push("/");
     } else {
@@ -179,6 +180,28 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* Pilihan Stan Jika Login Sebagai Mitra Penjual */}
+            {loginRole === "SELLER" && (
+              <div>
+                <label className="text-[11px] font-bold text-foreground block mb-1">
+                  Pilih Stan Kantin Anda
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedLoginStandId}
+                    onChange={(e) => setSelectedLoginStandId(e.target.value)}
+                    className="w-full px-3 py-2.5 text-xs bg-background rounded-card border border-border focus:outline-none focus:border-primary font-medium cursor-pointer"
+                  >
+                    {stands.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.location})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="text-[11px] font-bold text-foreground block mb-1">
                 Email / NIM / ID Stand
@@ -226,29 +249,39 @@ export default function LoginPage() {
 
             {/* Quick Demo Login Preset */}
             <div className="pt-3 border-t border-border text-center">
-              <span className="text-[10px] text-foreground-secondary block mb-2">
-                Pintasan Demo Instan:
+              <span className="text-[10px] text-foreground-secondary block mb-2 font-medium">
+                Pintasan Demo Instan (Pengujian Mandiri):
               </span>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-3 gap-1.5">
                 <button
                   type="button"
                   onClick={() => {
                     login("alif.raditya@student.ub.ac.id", "BUYER");
                     router.push("/");
                   }}
-                  className="flex-1 py-1.5 px-2 bg-background hover:bg-foreground/5 text-[10px] font-semibold rounded border border-border text-foreground transition"
+                  className="py-1.5 px-1 bg-background hover:bg-primary-soft hover:text-primary text-[10px] font-semibold rounded border border-border transition text-center"
                 >
-                  🎓 Demo Mahasiswa
+                  🎓 Mahasiswa
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    login("busiti.filkom@gmail.com", "SELLER");
+                    login("geprek.filkom@gmail.com", "SELLER", "stand-1");
                     router.push("/seller/ringkasan");
                   }}
-                  className="flex-1 py-1.5 px-2 bg-background hover:bg-foreground/5 text-[10px] font-semibold rounded border border-border text-foreground transition"
+                  className="py-1.5 px-1 bg-background hover:bg-primary-soft hover:text-primary text-[10px] font-semibold rounded border border-border transition text-center"
                 >
-                  🍳 Demo Penjual
+                  🍗 Stan 01 (Geprek)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    login("baratie.filkom@gmail.com", "SELLER", "stand-3");
+                    router.push("/seller/ringkasan");
+                  }}
+                  className="py-1.5 px-1 bg-background hover:bg-primary-soft hover:text-primary text-[10px] font-semibold rounded border border-border transition text-center"
+                >
+                  ☕ Stan 03 (Baratie)
                 </button>
               </div>
             </div>

@@ -20,6 +20,7 @@ interface StandState {
   addStand: (stand: Stand) => void;
   addMenuItem: (menu: ExtendedMenuItem) => void;
   updateMenuItem: (menuId: string, updates: Partial<ExtendedMenuItem>) => void;
+  decrementStock: (purchasedItems: { menuItemId: string; quantity: number }[]) => void;
   deleteMenuItem: (menuId: string) => void;
   getStandById: (standId: string) => Stand | undefined;
   getMenusByStand: (standId: string) => ExtendedMenuItem[];
@@ -31,8 +32,8 @@ export const useStandStore = create<StandState>()(
       stands: mockStands,
       menuItems: mockMenuItems.map((m, idx) => ({
         ...m,
-        stockCount: idx === 1 ? 2 : idx === 3 ? 45 : 18,
-        stockMax: idx === 1 ? 25 : idx === 3 ? 60 : 30,
+        stockCount: idx === 1 ? 5 : idx === 3 ? 35 : 20,
+        stockMax: idx === 1 ? 25 : idx === 3 ? 50 : 30,
         stockStatus: idx === 1 ? "HAMPIR_HABIS" : "AMAN",
       })),
 
@@ -62,6 +63,26 @@ export const useStandStore = create<StandState>()(
         const updated = get().menuItems.map((m) =>
           m.id === menuId ? { ...m, ...updates } : m
         );
+        set({ menuItems: updated });
+      },
+
+      decrementStock: (purchasedItems) => {
+        const currentMenus = [...get().menuItems];
+        const updated = currentMenus.map((item) => {
+          const purchased = purchasedItems.find((p) => p.menuItemId === item.id);
+          if (purchased && item.stockCount !== undefined) {
+            const newCount = Math.max(0, item.stockCount - purchased.quantity);
+            const newStatus: "AMAN" | "HAMPIR_HABIS" | "HABIS" =
+              newCount === 0 ? "HABIS" : newCount <= 5 ? "HAMPIR_HABIS" : "AMAN";
+            return {
+              ...item,
+              stockCount: newCount,
+              stockStatus: newStatus,
+              isAvailable: newCount > 0,
+            };
+          }
+          return item;
+        });
         set({ menuItems: updated });
       },
 

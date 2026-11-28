@@ -21,12 +21,14 @@ import {
 export default function OrdersListPage() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
-  const { currentUser } = useAuthStore();
+  const { currentUser, buyerUser } = useAuthStore();
   const { getOrdersByBuyer } = useOrderStore();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const activeBuyer = buyerUser || (currentUser?.role === "BUYER" ? currentUser : null);
 
   if (!isMounted) {
     return (
@@ -45,7 +47,7 @@ export default function OrdersListPage() {
     );
   }
 
-  const buyerOrders = currentUser ? getOrdersByBuyer(currentUser.id) : [];
+  const buyerOrders = activeBuyer ? getOrdersByBuyer(activeBuyer.id) : [];
 
   // HANYA ambil pesanan yang SEDANG AKTIF (Dimasak atau Siap di Rak)
   const activeOrders = buyerOrders.filter(

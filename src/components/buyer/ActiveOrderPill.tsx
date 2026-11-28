@@ -8,7 +8,7 @@ import { useRouter, usePathname } from "next/navigation";
 
 export default function ActiveOrderPill() {
   const [isMounted, setIsMounted] = useState(false);
-  const { currentUser } = useAuthStore();
+  const { currentUser, buyerUser } = useAuthStore();
   const { getActiveOrderForBuyer } = useOrderStore();
   const router = useRouter();
   const pathname = usePathname();
@@ -17,11 +17,13 @@ export default function ActiveOrderPill() {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted || !currentUser || currentUser.role !== "BUYER" || pathname.startsWith("/orders")) {
+  const activeBuyer = buyerUser || (currentUser?.role === "BUYER" ? currentUser : null);
+
+  if (!isMounted || !activeBuyer || pathname.startsWith("/orders")) {
     return null;
   }
 
-  const activeOrder = getActiveOrderForBuyer(currentUser.id);
+  const activeOrder = getActiveOrderForBuyer(activeBuyer.id);
   if (!activeOrder) return null;
 
   const isReady = activeOrder.status === "READY_IN_RACK";

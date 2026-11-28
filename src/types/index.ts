@@ -69,7 +69,7 @@ export interface Order {
   items: CartItem[];
   totalPrice: number;
   status: OrderStatus;
-  paymentMethod: "QRIS";
+  paymentMethod: "QRIS" | "SAJIPAY";
   paymentStatus: "UNPAID" | "PAID";
   rackSlot?: string;         // Lokasi rak cerdas (misal: "Rak B-03")
   pickupPin?: string;        // 4 digit PIN / OTP untuk membuka locker/verifikasi ambil

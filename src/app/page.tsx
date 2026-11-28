@@ -22,7 +22,7 @@ import {
 export default function HomePage() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
-  const { currentUser } = useAuthStore();
+  const { currentUser, buyerUser, isHydrated } = useAuthStore();
   const { stands, menuItems } = useStandStore();
 
   const [selectedStandId, setSelectedStandId] = useState<string>("all");
@@ -36,19 +36,22 @@ export default function HomePage() {
     setIsMounted(true);
   }, []);
 
+  // Mahasiswa session yang aktif
+  const activeBuyer = buyerUser || (currentUser?.role === "BUYER" ? currentUser : null);
+
   // PROTEKSI RUTE & PENGALIHAN DI DALAM useEffect (Mencegah Loop & Error Render)
   useEffect(() => {
-    if (isMounted) {
-      if (!currentUser) {
+    if (isMounted && isHydrated) {
+      if (!activeBuyer && !currentUser) {
         router.replace("/login");
-      } else if (currentUser.role === "SELLER") {
+      } else if (currentUser?.role === "SELLER" && !activeBuyer) {
         router.replace("/seller/ringkasan");
       }
     }
-  }, [isMounted, currentUser, router]);
+  }, [isMounted, isHydrated, currentUser, activeBuyer, router]);
 
   // Tunggu sampai browser siap atau selama proses pengalihan
-  if (!isMounted || !currentUser || currentUser.role === "SELLER") {
+  if (!isMounted || !isHydrated || (!activeBuyer && (!currentUser || currentUser.role === "SELLER"))) {
     return (
       <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
@@ -176,7 +179,10 @@ export default function HomePage() {
             {filteredMenuItems.map((item) => {
               const stand = stands.find((s) => s.id === item.standId);
               const isStandClosed = stand ? !stand.isOpen : false;
-              const isOutOfStock = item.stockStatus === "HABIS";
+              const isOutOfStock =
+                item.stockStatus === "HABIS" ||
+                (item.stockCount !== undefined && item.stockCount <= 0);
+              const isAlmostEmpty = item.stockStatus === "HAMPIR_HABIS" && (item.stockCount ?? 0) > 0;
 
               return (
                 <div
@@ -201,6 +207,11 @@ export default function HomePage() {
                     {!isStandClosed && isOutOfStock && (
                       <span className="absolute inset-0 bg-black/50 backdrop-blur-xs rounded-card flex items-center justify-center text-[10px] text-white font-bold text-center px-1">
                         Habis
+                      </span>
+                    )}
+                    {!isStandClosed && isAlmostEmpty && (
+                      <span className="absolute bottom-1 left-1 right-1 bg-status-danger text-white text-[9px] font-bold py-0.5 rounded-pill text-center shadow-xs">
+                        Sisa {item.stockCount} Porsi
                       </span>
                     )}
                   </div>

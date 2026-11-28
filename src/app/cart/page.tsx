@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCartStore } from "@/stores/cartStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useOrderStore } from "@/stores/orderStore";
+import { useStandStore } from "@/stores/standStore";
 import BottomNav from "@/components/layout/BottomNav";
 import confetti from "canvas-confetti";
 import {
@@ -18,6 +19,10 @@ import {
   Store,
   Sparkles,
   ShoppingBag,
+  Wallet,
+  AlertCircle,
+  CreditCard,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,10 +33,13 @@ export default function CartPage() {
 
   const { items, standId, standName, updateQuantity, removeItem, clearCart, getTotalPrice } =
     useCartStore();
-  const { currentUser } = useAuthStore();
+  const { currentUser, deductBalance, topUpBalance } = useAuthStore();
   const { createOrder } = useOrderStore();
+  const { stands, decrementStock } = useStandStore();
 
+  const [paymentMethod, setPaymentMethod] = useState<"SAJIPAY" | "QRIS">("SAJIPAY");
   const [isQRISModalOpen, setIsQRISModalOpen] = useState(false);
+  const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentSuccessOrder, setPaymentSuccessOrder] = useState<string | null>(null);
 
@@ -42,6 +50,13 @@ export default function CartPage() {
   const subtotal = isMounted ? getTotalPrice() : 0;
   const platformFee = 1000; // Biaya platform smart locker
   const finalTotal = subtotal > 0 ? subtotal + platformFee : 0;
+
+  // Cek status buka/tutup stan
+  const activeStand = stands.find((s) => s.id === standId);
+  const isStandClosed = activeStand ? !activeStand.isOpen : false;
+
+  const currentBalance = currentUser?.balance || 0;
+  const isBalanceSufficient = currentBalance >= finalTotal;
 
   // Tunggu browser siap
   if (!isMounted) {
@@ -93,20 +108,41 @@ export default function CartPage() {
     );
   }
 
-  // Handler Simulasi Bayar Berhasil
-  const handlePaymentSuccess = () => {
+  // Eksekusi Pesanan (Potong Stok & Potong Saldo jika SajiPay)
+  const processCheckout = (method: "SAJIPAY" | "QRIS") => {
     if (!currentUser || !standId || !standName) return;
+
+    if (method === "SAJIPAY") {
+      if (!isBalanceSufficient) {
+        setIsTopUpModalOpen(true);
+        return;
+      }
+      // Potong saldo mahasiswa
+      const success = deductBalance(finalTotal);
+      if (!success) {
+        alert("Saldo SajiPay tidak mencukupi!");
+        return;
+      }
+    }
 
     setIsProcessingPayment(true);
 
     setTimeout(() => {
-      // 1. Buat pesanan baru ke orderStore (dapur penjual otomatis langsung menerima!)
-      const newOrder = createOrder(currentUser, standId, standName, items, finalTotal);
+      // 1. Kurangi stok menu stan secara atomic & sinkron
+      decrementStock(
+        items.map((it) => ({
+          menuItemId: it.menuItem.id,
+          quantity: it.quantity,
+        }))
+      );
 
-      // 2. Kosongkan keranjang
+      // 2. Buat pesanan baru ke orderStore (dapur stan yang bersangkutan langsung menerima!)
+      const newOrder = createOrder(currentUser, standId, standName, items, finalTotal, method);
+
+      // 3. Kosongkan keranjang
       clearCart();
 
-      // 3. Tembakkan kembang api / confetti
+      // 4. Confetti
       confetti({
         particleCount: 80,
         spread: 60,
@@ -143,6 +179,16 @@ export default function CartPage() {
             Hapus Semua
           </button>
         </header>
+
+        {/* Peringatan Jika Stan Sedang Tutup Sementara */}
+        {isStandClosed && (
+          <div className="mx-4 mt-3 p-3 bg-status-danger-soft border border-status-danger/30 rounded-card flex items-center gap-2.5 text-status-danger text-xs font-semibold">
+            <AlertCircle size={18} className="shrink-0" />
+            <span>
+              Stan <strong>{standName}</strong> sedang tutup sementara. Pesanan belum dapat diproses.
+            </span>
+          </div>
+        )}
 
         {/* Daftar Item Menu di Keranjang */}
         <div className="p-4 space-y-3">
@@ -236,18 +282,97 @@ export default function CartPage() {
           </div>
         </div>
 
-        {/* Pilihan Metode Bayar: QRIS */}
-        <div className="mx-4 mt-3 p-3 bg-primary-soft/60 border border-primary/20 rounded-card flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-pill bg-white flex items-center justify-center text-primary shadow-xs">
-              <QrCode size={18} />
+        {/* Pilihan Metode Pembayaran (SajiPay vs QRIS) */}
+        <div className="mx-4 mt-4 space-y-2.5">
+          <h4 className="font-bold text-foreground text-xs">Pilih Metode Pembayaran</h4>
+
+          {/* Opsi 1: SajiPay (Saldo Mahasiswa) */}
+          <div
+            onClick={() => setPaymentMethod("SAJIPAY")}
+            className={`p-3 rounded-card border cursor-pointer transition flex items-center justify-between ${
+              paymentMethod === "SAJIPAY"
+                ? "bg-primary-soft/40 border-primary shadow-xs"
+                : "bg-surface border-border hover:border-border-dark"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shrink-0">
+                <Wallet size={18} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-foreground">SajiPay Mahasiswa</span>
+                  {isBalanceSufficient ? (
+                    <span className="text-[9px] bg-status-success-soft text-status-success font-bold px-1.5 py-0.2 rounded-pill">
+                      Saldo Cukup
+                    </span>
+                  ) : (
+                    <span className="text-[9px] bg-status-danger-soft text-status-danger font-bold px-1.5 py-0.2 rounded-pill">
+                      Kurang
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-foreground-secondary font-mono mt-0.5">
+                  Saldo: Rp {currentBalance.toLocaleString("id-ID")}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-bold text-foreground">Metode: QRIS Dinamis</p>
-              <p className="text-[10px] text-foreground-secondary">BCA, Mandiri, GoPay, ShopeePay</p>
+
+            <div className="flex items-center gap-2">
+              {!isBalanceSufficient && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsTopUpModalOpen(true);
+                  }}
+                  className="text-[10px] text-primary font-bold underline px-1 py-0.5"
+                >
+                  Top Up
+                </button>
+              )}
+              <div
+                className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                  paymentMethod === "SAJIPAY"
+                    ? "border-primary bg-primary text-white"
+                    : "border-border"
+                }`}
+              >
+                {paymentMethod === "SAJIPAY" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+              </div>
             </div>
           </div>
-          <ShieldCheck size={18} className="text-status-success" />
+
+          {/* Opsi 2: QRIS Dinamis */}
+          <div
+            onClick={() => setPaymentMethod("QRIS")}
+            className={`p-3 rounded-card border cursor-pointer transition flex items-center justify-between ${
+              paymentMethod === "QRIS"
+                ? "bg-primary-soft/40 border-primary shadow-xs"
+                : "bg-surface border-border hover:border-border-dark"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-[#107C41] text-white flex items-center justify-center shrink-0">
+                <QrCode size={18} />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-foreground">QRIS Dinamis</span>
+                <p className="text-[10px] text-foreground-secondary">
+                  BCA, Mandiri, BRI, ShopeePay, GoPay
+                </p>
+              </div>
+            </div>
+
+            <div
+              className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                paymentMethod === "QRIS"
+                  ? "border-primary bg-primary text-white"
+                  : "border-border"
+              }`}
+            >
+              {paymentMethod === "QRIS" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -260,13 +385,45 @@ export default function CartPage() {
           </span>
         </div>
 
-        <button
-          onClick={() => setIsQRISModalOpen(true)}
-          className="flex-1 py-3 px-6 bg-primary hover:bg-primary-deep text-white font-bold text-xs rounded-pill shadow-md transition active:scale-95 flex items-center justify-center gap-2"
-        >
-          <QrCode size={16} />
-          Bayar Sekarang
-        </button>
+        {paymentMethod === "SAJIPAY" ? (
+          <button
+            onClick={() => processCheckout("SAJIPAY")}
+            disabled={isStandClosed || isProcessingPayment}
+            className={`flex-1 py-3 px-6 text-white font-bold text-xs rounded-pill shadow-md transition active:scale-95 flex items-center justify-center gap-2 ${
+              isStandClosed
+                ? "bg-foreground-secondary cursor-not-allowed opacity-60"
+                : !isBalanceSufficient
+                ? "bg-status-warning hover:bg-amber-600"
+                : "bg-primary hover:bg-primary-deep"
+            }`}
+          >
+            {isProcessingPayment ? (
+              <span>Memproses Pembayaran...</span>
+            ) : isStandClosed ? (
+              <span>Stan Tutup Sementara</span>
+            ) : !isBalanceSufficient ? (
+              <span>Top Up & Bayar Saldo</span>
+            ) : (
+              <>
+                <Wallet size={16} />
+                Bayar dengan SajiPay
+              </>
+            )}
+          </button>
+        ) : (
+          <button
+            onClick={() => setIsQRISModalOpen(true)}
+            disabled={isStandClosed || isProcessingPayment}
+            className={`flex-1 py-3 px-6 text-white font-bold text-xs rounded-pill shadow-md transition active:scale-95 flex items-center justify-center gap-2 ${
+              isStandClosed
+                ? "bg-foreground-secondary cursor-not-allowed opacity-60"
+                : "bg-primary hover:bg-primary-deep"
+            }`}
+          >
+            <QrCode size={16} />
+            Bayar via QRIS
+          </button>
+        )}
       </div>
 
       <BottomNav />
@@ -294,7 +451,6 @@ export default function CartPage() {
                     Scan QRIS ini menggunakan m-Banking atau e-Wallet kamu
                   </p>
 
-                  {/* Simulasi Gambar QR Code */}
                   <div className="p-4 bg-white rounded-card border-2 border-dashed border-primary/40 inline-block shadow-inner mb-3">
                     <img
                       src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=SAJIIN-FILKOM-PAYMENT"
@@ -312,7 +468,7 @@ export default function CartPage() {
 
                   <div className="space-y-2">
                     <button
-                      onClick={handlePaymentSuccess}
+                      onClick={() => processCheckout("QRIS")}
                       disabled={isProcessingPayment}
                       className="w-full py-2.5 bg-status-success hover:bg-emerald-700 text-white font-bold text-xs rounded-pill shadow-md transition flex items-center justify-center gap-2"
                     >
@@ -335,32 +491,102 @@ export default function CartPage() {
                     </button>
                   </div>
                 </>
-              ) : (
-                /* Tampilan Pembayaran Berhasil */
-                <div className="py-4 space-y-3">
-                  <div className="w-16 h-16 bg-status-success-soft text-status-success rounded-full flex items-center justify-center mx-auto shadow-sm">
-                    <CheckCircle2 size={36} />
-                  </div>
-                  <h3 className="text-base font-bold text-foreground">Pembayaran Berhasil!</h3>
-                  <p className="text-xs text-foreground-secondary">
-                    Pesananmu telah diteruskan ke dapur stan <strong>{standName}</strong> dengan nomor
-                    antrean:
-                  </p>
-                  <div className="p-3 bg-primary-soft rounded-card font-mono font-bold text-primary-deep text-lg">
-                    {paymentSuccessOrder}
-                  </div>
+              ) : null}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
-                  <button
-                    onClick={() => {
-                      setIsQRISModalOpen(false);
-                      router.push(`/orders/${paymentSuccessOrder}`);
-                    }}
-                    className="w-full mt-4 py-3 bg-primary hover:bg-primary-deep text-white font-bold text-xs rounded-pill shadow-md transition"
-                  >
-                    Pantau Pesanan di Dapur & Rak →
-                  </button>
+      {/* Modal Quick Top Up SajiPay */}
+      <AnimatePresence>
+        {isTopUpModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-[360px] bg-surface rounded-dialog p-5 shadow-2xl border border-border"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <Wallet size={18} className="text-primary" />
+                  <h3 className="font-bold text-foreground text-sm">Top Up SajiPay Cepat</h3>
                 </div>
-              )}
+                <button
+                  onClick={() => setIsTopUpModalOpen(false)}
+                  className="text-foreground-secondary hover:text-foreground text-xs font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="my-4 space-y-3">
+                <p className="text-xs text-foreground-secondary">
+                  Saldo kamu saat ini <strong>Rp {currentBalance.toLocaleString("id-ID")}</strong>. Pilih
+                  nominal isi ulang untuk melanjutkan pesanan:
+                </p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {[20000, 50000, 100000, 150000].map((nominal) => (
+                    <button
+                      key={nominal}
+                      onClick={() => {
+                        topUpBalance(nominal);
+                        confetti({ particleCount: 40, spread: 45 });
+                        setIsTopUpModalOpen(false);
+                      }}
+                      className="py-2.5 px-3 bg-primary-soft/50 hover:bg-primary hover:text-white border border-primary/20 rounded-card font-bold text-xs text-primary transition"
+                    >
+                      +Rp {nominal.toLocaleString("id-ID")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsTopUpModalOpen(false);
+                  router.push("/profile");
+                }}
+                className="w-full py-2 text-center text-xs text-foreground-secondary hover:text-primary font-semibold"
+              >
+                Atau buka Halaman Profil Lengkap →
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Tampilan Layar Sukses Bayar */}
+      <AnimatePresence>
+        {paymentSuccessOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-[360px] bg-surface rounded-dialog p-5 shadow-2xl border border-border text-center py-6 space-y-3"
+            >
+              <div className="w-16 h-16 bg-status-success-soft text-status-success rounded-full flex items-center justify-center mx-auto shadow-sm">
+                <CheckCircle2 size={36} />
+              </div>
+              <h3 className="text-base font-bold text-foreground">Pembayaran Berhasil!</h3>
+              <p className="text-xs text-foreground-secondary">
+                Pesananmu telah diteruskan ke dapur stan <strong>{standName}</strong> dengan nomor
+                antrean:
+              </p>
+              <div className="p-3 bg-primary-soft rounded-card font-mono font-bold text-primary-deep text-lg">
+                {paymentSuccessOrder}
+              </div>
+
+              <button
+                onClick={() => {
+                  router.push(`/orders/${paymentSuccessOrder}`);
+                }}
+                className="w-full mt-4 py-3 bg-primary hover:bg-primary-deep text-white font-bold text-xs rounded-pill shadow-md transition"
+              >
+                Pantau Pesanan di Dapur & Rak →
+              </button>
             </motion.div>
           </div>
         )}

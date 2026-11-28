@@ -23,13 +23,15 @@ export default function HistoryPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<"ALL" | "COMPLETED" | "CANCELLED">("ALL");
 
-  const { currentUser } = useAuthStore();
+  const { currentUser, buyerUser } = useAuthStore();
   const { getOrdersByBuyer } = useOrderStore();
   const { addItem, clearCart } = useCartStore();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const activeBuyer = buyerUser || (currentUser?.role === "BUYER" ? currentUser : null);
 
   if (!isMounted) {
     return (
@@ -49,7 +51,7 @@ export default function HistoryPage() {
   }
 
   // Ambil semua pesanan milik mahasiswa yang sedang login
-  const buyerOrders = currentUser ? getOrdersByBuyer(currentUser.id) : [];
+  const buyerOrders = activeBuyer ? getOrdersByBuyer(activeBuyer.id) : [];
 
   // Filter berdasarkan tab
   const filteredOrders = buyerOrders.filter((order) => {

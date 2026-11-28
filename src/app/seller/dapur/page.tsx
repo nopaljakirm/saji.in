@@ -24,7 +24,7 @@ export default function SellerDapurPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [filterTab, setFilterTab] = useState<"ALL" | "COOKING" | "READY">("ALL");
 
-  const { currentUser } = useAuthStore();
+  const { currentUser, sellerUser, isHydrated, switchSellerStand } = useAuthStore();
   const { orders, updateOrderStatus } = useOrderStore();
   const { stands } = useStandStore();
 
@@ -32,14 +32,16 @@ export default function SellerDapurPage() {
     setIsMounted(true);
   }, []);
 
+  const activeSeller = sellerUser || (currentUser?.role === "SELLER" ? currentUser : null);
+
   // Proteksi di dalam useEffect
   useEffect(() => {
-    if (isMounted && (!currentUser || currentUser.role !== "SELLER")) {
+    if (isMounted && isHydrated && !activeSeller) {
       router.replace("/login");
     }
-  }, [isMounted, currentUser, router]);
+  }, [isMounted, isHydrated, activeSeller, router]);
 
-  if (!isMounted || !currentUser || currentUser.role !== "SELLER") {
+  if (!isMounted || !isHydrated || !activeSeller) {
     return (
       <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
@@ -48,11 +50,10 @@ export default function SellerDapurPage() {
     );
   }
 
-  const currentStand = stands.find((s) => s.id === (currentUser?.standId || "stand-1")) || stands[0];
+  const currentStand = stands.find((s) => s.id === (activeSeller.standId || "stand-1")) || stands[0];
 
-  const standOrders = orders.filter(
-    (o) => !currentUser?.standId || o.standId === currentUser.standId
-  );
+  // KETAT: Pesanan HANYA untuk stan yang sedang aktif!
+  const standOrders = orders.filter((o) => o.standId === currentStand.id);
 
   const cookingOrders = standOrders.filter((o) => o.status === "COOKING");
   const readyOrders = standOrders.filter((o) => o.status === "READY_IN_RACK");
@@ -76,17 +77,32 @@ export default function SellerDapurPage() {
         {/* Header Penjual */}
         <header className="p-4 bg-surface border-b border-border sticky top-0 z-20 shadow-xs">
           <div className="flex items-center justify-between mb-2">
-            <div>
-              <span className="text-[10px] font-bold text-status-success uppercase tracking-wider flex items-center gap-1">
-                <Store size={12} /> Dapur KDS • {currentStand?.name || "Warung Bu Siti"}
-              </span>
+            <div className="flex-1 mr-2">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Store size={13} className="text-primary shrink-0" />
+                {/* Switcher Stan Aktif untuk Pengujian Multi-Stan */}
+                <select
+                  value={currentStand.id}
+                  onChange={(e) => {
+                    const chosen = stands.find((s) => s.id === e.target.value);
+                    switchSellerStand(e.target.value, chosen?.name);
+                  }}
+                  className="bg-primary-soft text-primary-deep font-bold text-xs px-2 py-0.5 rounded-pill border border-primary/20 focus:outline-none cursor-pointer max-w-[220px] truncate"
+                >
+                  {stands.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <h1 className="text-base font-bold text-foreground">
-                Pesanan Masuk
+                Pesanan Masuk (Dapur KDS)
               </h1>
             </div>
 
-            <div className="w-8 h-8 rounded-full bg-primary-soft text-primary-deep font-bold text-xs flex items-center justify-center">
-              BS
+            <div className="w-8 h-8 rounded-full bg-primary-soft text-primary-deep font-bold text-xs flex items-center justify-center shrink-0">
+              {currentStand.name.substring(0, 2).toUpperCase()}
             </div>
           </div>
 

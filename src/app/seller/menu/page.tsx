@@ -21,7 +21,7 @@ import {
 export default function SellerMenuPage() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
-  const { currentUser } = useAuthStore();
+  const { currentUser, sellerUser, isHydrated, switchSellerStand } = useAuthStore();
   const { menuItems, stands, addMenuItem, updateMenuItem, deleteMenuItem } = useStandStore();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -42,14 +42,16 @@ export default function SellerMenuPage() {
     setIsMounted(true);
   }, []);
 
+  const activeSeller = sellerUser || (currentUser?.role === "SELLER" ? currentUser : null);
+
   // Proteksi di dalam useEffect
   useEffect(() => {
-    if (isMounted && (!currentUser || currentUser.role !== "SELLER")) {
+    if (isMounted && isHydrated && !activeSeller) {
       router.replace("/login");
     }
-  }, [isMounted, currentUser, router]);
+  }, [isMounted, isHydrated, activeSeller, router]);
 
-  if (!isMounted || !currentUser || currentUser.role !== "SELLER") {
+  if (!isMounted || !isHydrated || !activeSeller) {
     return (
       <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
@@ -58,7 +60,7 @@ export default function SellerMenuPage() {
     );
   }
 
-  const currentStand = stands.find((s) => s.id === (currentUser.standId || "stand-1")) || stands[0];
+  const currentStand = stands.find((s) => s.id === (activeSeller.standId || "stand-1")) || stands[0];
 
   const filtered = menuItems.filter((m) => {
     const matchesStand = m.standId === currentStand.id;
@@ -118,16 +120,30 @@ export default function SellerMenuPage() {
         {/* Header */}
         <header className="p-4 bg-surface border-b border-border sticky top-0 z-20 shadow-xs">
           <div className="flex items-center justify-between mb-2">
-            <div>
-              <span className="text-[10px] font-bold text-status-success uppercase tracking-wider flex items-center gap-1">
-                <Store size={12} /> {currentStand.name}
-              </span>
+            <div className="flex-1 mr-2">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Store size={13} className="text-primary shrink-0" />
+                <select
+                  value={currentStand.id}
+                  onChange={(e) => {
+                    const chosen = stands.find((s) => s.id === e.target.value);
+                    switchSellerStand(e.target.value, chosen?.name);
+                  }}
+                  className="bg-primary-soft text-primary-deep font-bold text-xs px-2 py-0.5 rounded-pill border border-primary/20 focus:outline-none cursor-pointer max-w-[220px] truncate"
+                >
+                  {stands.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <h1 className="text-base font-bold text-foreground">Menu & Ketersediaan</h1>
             </div>
 
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="px-3 py-1.5 bg-primary hover:bg-primary-deep text-white font-bold text-xs rounded-pill shadow-xs transition flex items-center gap-1"
+              className="px-3 py-1.5 bg-primary hover:bg-primary-deep text-white font-bold text-xs rounded-pill shadow-xs transition flex items-center gap-1 shrink-0"
             >
               <Plus size={14} /> Tambah
             </button>

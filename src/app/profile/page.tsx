@@ -25,7 +25,7 @@ import {
 export default function ProfilePage() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
-  const { currentUser, topUpBalance, logout, updateAllergies } = useAuthStore();
+  const { currentUser, buyerUser, isHydrated, topUpBalance, logout, updateAllergies } = useAuthStore();
 
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [selectedTopUpAmount, setSelectedTopUpAmount] = useState<number>(20000);
@@ -36,14 +36,16 @@ export default function ProfilePage() {
     setIsMounted(true);
   }, []);
 
+  const activeBuyer = buyerUser || (currentUser?.role === "BUYER" ? currentUser : null);
+
   // Proteksi di dalam useEffect
   useEffect(() => {
-    if (isMounted && !currentUser) {
+    if (isMounted && isHydrated && !activeBuyer) {
       router.replace("/login");
     }
-  }, [isMounted, currentUser, router]);
+  }, [isMounted, isHydrated, activeBuyer, router]);
 
-  if (!isMounted || !currentUser) {
+  if (!isMounted || !isHydrated || !activeBuyer) {
     return (
       <div className="flex-1 flex flex-col justify-center items-center min-h-screen">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
@@ -66,7 +68,7 @@ export default function ProfilePage() {
   const allergyOptions = ["Kacang", "Seafood / Udang", "Telur", "Susu Sapi", "Gluten / Terigu", "Pedas Ekstrem"];
 
   const toggleAllergy = (allergy: string) => {
-    const current = currentUser.allergies || [];
+    const current = activeBuyer.allergies || [];
     if (current.includes(allergy)) {
       updateAllergies(current.filter((a) => a !== allergy));
     } else {
@@ -87,7 +89,7 @@ export default function ProfilePage() {
           {/* Kartu Identitas Mahasiswa (Persis Figma) */}
           <div className="p-4 bg-surface rounded-card border border-border shadow-xs flex items-center gap-3.5">
             <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary-deep text-white rounded-full flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
-              {currentUser.name
+              {activeBuyer.name
                 .split(" ")
                 .map((n) => n[0])
                 .slice(0, 2)
@@ -96,10 +98,10 @@ export default function ProfilePage() {
 
             <div className="flex-1">
               <h2 className="text-sm font-bold text-foreground leading-tight">
-                {currentUser.name}
+                {activeBuyer.name}
               </h2>
               <p className="text-[11px] text-foreground-secondary mt-0.5 font-mono">
-                NIM: {currentUser.nim || "225150200111"} • {currentUser.faculty || "FILKOM UB"}
+                NIM: {activeBuyer.nim || "225150200111"} • {activeBuyer.faculty || "FILKOM UB"}
               </p>
               <div className="flex items-center gap-2 mt-1.5">
                 <span className="text-[9px] bg-primary-soft text-primary-deep font-bold px-2 py-0.5 rounded-pill">
@@ -120,7 +122,7 @@ export default function ProfilePage() {
                   <Wallet size={12} /> Saldo SajiPay Mahasiswa
                 </span>
                 <h3 className="text-2xl font-black mt-1 font-mono">
-                  Rp {(currentUser.balance || 0).toLocaleString("id-ID")}
+                  Rp {(activeBuyer.balance || 0).toLocaleString("id-ID")}
                 </h3>
                 <p className="text-[10px] opacity-80 mt-1">
                   Bebas biaya admin antar kantin FILKOM
@@ -160,8 +162,8 @@ export default function ProfilePage() {
                 <div>
                   <h4 className="text-xs font-bold text-foreground">Preferensi Alergi & Pantangan</h4>
                   <p className="text-[10px] text-foreground-secondary">
-                    {currentUser.allergies && currentUser.allergies.length > 0
-                      ? `${currentUser.allergies.length} alergen dipilih (${currentUser.allergies.join(", ")})`
+                    {activeBuyer.allergies && activeBuyer.allergies.length > 0
+                      ? `${activeBuyer.allergies.length} alergen dipilih (${activeBuyer.allergies.join(", ")})`
                       : "Belum diatur"}
                   </p>
                 </div>
@@ -293,7 +295,7 @@ export default function ProfilePage() {
 
             <div className="space-y-2 mb-4">
               {allergyOptions.map((alg) => {
-                const isSelected = (currentUser.allergies || []).includes(alg);
+                const isSelected = (activeBuyer.allergies || []).includes(alg);
                 return (
                   <button
                     key={alg}
