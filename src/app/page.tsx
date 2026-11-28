@@ -17,6 +17,7 @@ import {
   UtensilsCrossed,
   Wallet,
   AlertCircle,
+  Store,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -127,53 +128,146 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Pilihan Stan Kantin FILKOM */}
+        {/* Pilihan Stan Kantin FILKOM (Pemisahan Stand yang Jelas) */}
         <div className="mt-5">
-          <div className="px-4 flex items-center justify-between mb-2.5">
-            <h3 className="font-bold text-foreground text-sm">Pilihan Stan Kantin</h3>
-            <span className="text-[11px] text-foreground-secondary">
-              {stands.filter((s) => s.isOpen).length} Stan Buka
-            </span>
+          <div className="px-4 flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-bold text-foreground text-sm">Pilihan Stan Kantin</h3>
+              <p className="text-[11px] text-foreground-secondary">
+                Pilih stan untuk melihat menu khusus stan tersebut
+              </p>
+            </div>
+            {selectedStandId !== "all" ? (
+              <button
+                onClick={() => setSelectedStandId("all")}
+                className="text-[11px] text-primary font-bold hover:underline"
+              >
+                Lihat Semua
+              </button>
+            ) : (
+              <span className="text-[11px] text-foreground-secondary font-medium">
+                {stands.filter((s) => s.isOpen).length} Stan Buka
+              </span>
+            )}
           </div>
 
-          <div className="flex gap-2.5 overflow-x-auto px-4 no-scrollbar pb-1">
+          {/* Kartu Visual Stan (Horizontal Scroll Card) */}
+          <div className="flex gap-3 overflow-x-auto px-4 no-scrollbar pb-2">
+            {/* Tombol Opsi Semua Stan */}
             <button
               onClick={() => setSelectedStandId("all")}
-              className={`px-3 py-1.5 rounded-pill text-xs font-semibold whitespace-nowrap transition shrink-0 ${
+              className={`flex flex-col items-center justify-center p-3 rounded-card border transition shrink-0 w-24 text-center ${
                 selectedStandId === "all"
-                  ? "bg-primary text-white shadow-sm"
-                  : "bg-surface border border-border text-foreground hover:bg-foreground/5"
+                  ? "bg-primary text-white border-primary shadow-sm"
+                  : "bg-surface border-border text-foreground hover:bg-background"
               }`}
             >
-              Semua Menu
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center mb-1.5 ${
+                  selectedStandId === "all" ? "bg-white/20 text-white" : "bg-primary-soft text-primary"
+                }`}
+              >
+                <UtensilsCrossed size={18} />
+              </div>
+              <span className="text-xs font-bold leading-tight">Semua</span>
+              <span className="text-[10px] opacity-80 mt-0.5">Semua Stan</span>
             </button>
 
-            {stands.map((stand) => (
-              <button
-                key={stand.id}
-                onClick={() => setSelectedStandId(stand.id)}
-                className={`px-3 py-1.5 rounded-pill text-xs font-semibold whitespace-nowrap transition shrink-0 flex items-center gap-1.5 ${
-                  selectedStandId === stand.id
-                    ? "bg-primary text-white shadow-sm"
-                    : "bg-surface border border-border text-foreground hover:bg-foreground/5"
-                } ${!stand.isOpen ? "opacity-60" : ""}`}
-              >
-                <span>{stand.name.split(" ")[0]}</span>
-                {!stand.isOpen ? (
-                  <span className="text-[9px] bg-status-danger-soft text-status-danger px-1.5 py-0.2 rounded-pill font-bold">
-                    Tutup
-                  </span>
-                ) : (
-                  <span className="text-[10px] opacity-75">★ {stand.rating}</span>
-                )}
-              </button>
-            ))}
+            {/* Kartu Tiap Stan Kantin */}
+            {stands.map((stand) => {
+              const isSelected = selectedStandId === stand.id;
+              return (
+                <div
+                  key={stand.id}
+                  onClick={() => setSelectedStandId(stand.id)}
+                  className={`p-2.5 rounded-card border transition shrink-0 w-44 cursor-pointer relative overflow-hidden flex flex-col justify-between ${
+                    isSelected
+                      ? "bg-primary-soft/40 border-primary shadow-md ring-1 ring-primary"
+                      : "bg-surface border-border hover:border-primary/40 shadow-xs"
+                  } ${!stand.isOpen ? "opacity-65" : ""}`}
+                >
+                  <div className="relative">
+                    <img
+                      src={stand.image}
+                      alt={stand.name}
+                      className="w-full h-20 object-cover rounded-card mb-2 border border-border/50"
+                    />
+                    {/* Badge Status Buka / Tutup */}
+                    <span
+                      className={`absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-pill shadow-xs ${
+                        stand.isOpen
+                          ? "bg-status-success text-white"
+                          : "bg-status-danger text-white"
+                      }`}
+                    >
+                      {stand.isOpen ? "Buka" : "Tutup"}
+                    </span>
+
+                    {/* Rating Bintang */}
+                    <span className="absolute bottom-3 right-1.5 bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded-pill flex items-center gap-0.5">
+                      ★ {stand.rating}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-foreground text-xs line-clamp-1 leading-snug">
+                      {stand.name}
+                    </h4>
+                    <p className="text-[10px] text-foreground-secondary line-clamp-1 mt-0.5">
+                      {stand.location}
+                    </p>
+
+                    <div className="flex items-center justify-between text-[10px] text-foreground-secondary mt-2 pt-1.5 border-t border-border/40">
+                      <span>⏱ {stand.estimatedTime}</span>
+                      <span className="text-primary font-semibold">
+                        {stand.queueLength} antrean
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
+        {/* Banner Filter Stan Aktif (Menegaskan Stan yang Sedang Dilihat) */}
+        {selectedStandId !== "all" && (
+          <div className="mx-4 mt-3 p-3 bg-primary-soft/70 border border-primary/30 rounded-card flex items-center justify-between animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shrink-0">
+                <Store size={15} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-primary block leading-tight">
+                  SEDANG MELIHAT MENU STAN:
+                </span>
+                <span className="text-xs font-bold text-foreground">
+                  {stands.find((s) => s.id === selectedStandId)?.name}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setSelectedStandId("all")}
+              className="text-[11px] font-bold bg-white text-primary px-2.5 py-1 rounded-pill border border-primary/20 shadow-xs hover:bg-primary hover:text-white transition"
+            >
+              Tampilkan Semua
+            </button>
+          </div>
+        )}
+
         {/* Katalog Menu Makanan & Minuman */}
         <div className="mt-5 px-4">
-          <h3 className="font-bold text-foreground text-sm mb-3">Daftar Menu Populer</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-foreground text-sm">
+              {selectedStandId === "all"
+                ? "Daftar Menu Kantin"
+                : `Menu di ${stands.find((s) => s.id === selectedStandId)?.name}`}
+            </h3>
+            <span className="text-xs text-foreground-secondary font-medium">
+              {filteredMenuItems.length} Menu
+            </span>
+          </div>
 
           <div className="space-y-3">
             {filteredMenuItems.map((item) => {
